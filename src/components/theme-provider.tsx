@@ -3,9 +3,22 @@
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import type { ComponentProps } from "react";
 
+import { THEME_STORAGE_KEY } from "@/lib/theme";
+
 export function ThemeProvider({
   children,
   ...props
 }: ComponentProps<typeof NextThemesProvider>) {
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
+  return (
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+      storageKey={THEME_STORAGE_KEY}
+      {...props}
+    >
+      {children}
+    </NextThemesProvider>
+  );
 }
