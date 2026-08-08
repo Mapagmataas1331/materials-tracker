@@ -24,9 +24,8 @@ export const userRoleEnum = pgEnum("user_role", ["admin", "user"]);
 
 /**
  * `receipt` = поступление (приход), `issue` = списание (расход),
- * `adjustment` = корректировка после инвентаризации (see ТЗ п.15,
- * future scope — modelled now so the ledger never needs a breaking
- * migration when that feature is switched on).
+ * `adjustment` = корректировка остатка / ноги перемещения между местами
+ * (ТЗ п.15).
  */
 export const movementTypeEnum = pgEnum("movement_type", [
   "receipt",

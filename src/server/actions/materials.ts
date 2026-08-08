@@ -22,6 +22,7 @@ export async function createMaterialAction(values: unknown): Promise<ActionResul
       changes: { name: material.name },
     });
     revalidatePath("/materials");
+    revalidatePath("/purchase-list");
     return { ok: true, data: { id: material.id } };
   } catch (error) {
     return toActionError(error, "Не удалось создать материал", {
@@ -44,6 +45,7 @@ export async function updateMaterialAction(id: string, values: unknown): Promise
       changes: parsed,
     });
     revalidatePath("/materials");
+    revalidatePath("/purchase-list");
     revalidatePath(`/materials/${id}`);
     return { ok: true, data: null };
   } catch (error) {
@@ -65,6 +67,7 @@ export async function setMaterialArchivedAction(id: string, isArchived: boolean)
       action: isArchived ? "archive" : "restore",
     });
     revalidatePath("/materials");
+    revalidatePath("/purchase-list");
     revalidatePath(`/materials/${id}`);
     return { ok: true, data: null };
   } catch (error) {

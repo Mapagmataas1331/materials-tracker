@@ -61,7 +61,7 @@ export function ChangePasswordDialog({ userId, userName }: { userId: string; use
           <FieldGroup>
             <Field data-invalid={!!errors.password}>
               <FieldLabel htmlFor="new-password">Новый пароль</FieldLabel>
-              <Input id="new-password" type="text" autoComplete="off" {...register("password")} />
+              <Input id="new-password" type="password" autoComplete="new-password" {...register("password")} />
               <FieldError errors={errors.password ? [errors.password] : undefined} />
             </Field>
           </FieldGroup>

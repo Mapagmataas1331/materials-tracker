@@ -23,6 +23,7 @@ function revalidateMaterialPaths(materialId: string) {
   revalidatePath("/purchase-list");
   revalidatePath("/receipts");
   revalidatePath("/issues");
+  revalidatePath("/journal");
   revalidatePath(`/materials/${materialId}`);
 }
 

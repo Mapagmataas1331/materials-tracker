@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { toDecimalString } from "@/lib/decimal";
@@ -169,6 +169,7 @@ export async function listRecentMovements(type: "receipt" | "issue", limit = 25)
       comment: stockMovements.comment,
       balanceAfter: stockMovements.balanceAfter,
       createdAt: stockMovements.createdAt,
+      materialId: materials.id,
       materialName: materials.name,
       unitShortName: units.shortName,
       storageLocationName: storageLocations.name,
@@ -191,6 +192,116 @@ export async function listRecentMovements(type: "receipt" | "issue", limit = 25)
     unitCost: r.unitCost === null ? null : Number(r.unitCost),
     balanceAfter: Number(r.balanceAfter),
   }));
+}
+
+export type JournalMovementType = "receipt" | "issue" | "adjustment";
+
+export interface JournalFilters {
+  type?: JournalMovementType;
+  userId?: string;
+  storageLocationId?: string;
+  /** Case-insensitive material name search */
+  materialQuery?: string;
+  /** Inclusive calendar day `YYYY-MM-DD` */
+  dateFrom?: string;
+  /** Inclusive calendar day `YYYY-MM-DD` */
+  dateTo?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface JournalMovementRow {
+  id: string;
+  type: JournalMovementType;
+  quantity: number;
+  unitCost: number | null;
+  comment: string | null;
+  balanceAfter: number;
+  createdAt: Date;
+  materialId: string;
+  materialName: string;
+  unitShortName: string | null;
+  storageLocationName: string;
+  supplierName: string | null;
+  userName: string;
+}
+
+/**
+ * Global operations journal — all movement types with filters for
+ * handovers / audits (beyond per-material history and last-25 feeds).
+ */
+export async function listJournalMovements(
+  filters: JournalFilters = {},
+): Promise<{ rows: JournalMovementRow[]; total: number }> {
+  const limit = Math.min(Math.max(filters.limit ?? 50, 1), 200);
+  const offset = Math.max(filters.offset ?? 0, 0);
+  const conditions = [];
+
+  if (filters.type) {
+    conditions.push(eq(stockMovements.type, filters.type));
+  }
+  if (filters.userId) {
+    conditions.push(eq(stockMovements.userId, filters.userId));
+  }
+  if (filters.storageLocationId) {
+    conditions.push(eq(stockMovements.storageLocationId, filters.storageLocationId));
+  }
+  if (filters.materialQuery?.trim()) {
+    conditions.push(ilike(materials.name, `%${filters.materialQuery.trim()}%`));
+  }
+  // Compare on calendar date in the DB session timezone (set TZ in production).
+  if (filters.dateFrom) {
+    conditions.push(sql`${stockMovements.createdAt}::date >= ${filters.dateFrom}::date`);
+  }
+  if (filters.dateTo) {
+    conditions.push(sql`${stockMovements.createdAt}::date <= ${filters.dateTo}::date`);
+  }
+
+  const where = conditions.length ? and(...conditions) : undefined;
+
+  const [countRow] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(stockMovements)
+    .innerJoin(materials, eq(stockMovements.materialId, materials.id))
+    .where(where);
+
+  const rows = await db
+    .select({
+      id: stockMovements.id,
+      type: stockMovements.type,
+      quantity: stockMovements.quantity,
+      unitCost: stockMovements.unitCost,
+      comment: stockMovements.comment,
+      balanceAfter: stockMovements.balanceAfter,
+      createdAt: stockMovements.createdAt,
+      materialId: materials.id,
+      materialName: materials.name,
+      unitShortName: units.shortName,
+      storageLocationName: storageLocations.name,
+      supplierName: suppliers.name,
+      userName: users.fullName,
+    })
+    .from(stockMovements)
+    .innerJoin(materials, eq(stockMovements.materialId, materials.id))
+    .leftJoin(units, eq(materials.unitId, units.id))
+    .innerJoin(storageLocations, eq(stockMovements.storageLocationId, storageLocations.id))
+    .leftJoin(suppliers, eq(stockMovements.supplierId, suppliers.id))
+    .innerJoin(users, eq(stockMovements.userId, users.id))
+    .where(where)
+    .orderBy(desc(stockMovements.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  return {
+    total: Number(countRow?.count ?? 0),
+    rows: rows.map((r) => ({
+      ...r,
+      type: r.type as JournalMovementType,
+      quantity: Number(r.quantity),
+      unitCost: r.unitCost === null ? null : Number(r.unitCost),
+      balanceAfter: Number(r.balanceAfter),
+    })),
+  };
 }
 
 export interface CreateIssueInput {
@@ -252,6 +363,7 @@ export interface CreateAdjustmentInput {
 /**
  * Inventory correction: set stock at a location to an absolute quantity.
  * Ledger stores a signed delta under type `adjustment`.
+ * Locks the stock row (or inserts it) so concurrent corrections cannot race.
  */
 export async function createAdjustment(input: CreateAdjustmentInput) {
   const newQty = toDecimalString(input.newQuantity);
@@ -259,24 +371,43 @@ export async function createAdjustment(input: CreateAdjustmentInput) {
     await assertActiveMaterial(tx, input.materialId);
     await assertActiveStorageLocation(tx, input.storageLocationId);
 
-    const current = await getLocationQuantity(tx, input.materialId, input.storageLocationId);
+    // Ensure a row exists, then lock it for the absolute set.
+    await tx
+      .insert(materialStock)
+      .values({
+        materialId: input.materialId,
+        storageLocationId: input.storageLocationId,
+        quantity: "0",
+      })
+      .onConflictDoNothing({
+        target: [materialStock.materialId, materialStock.storageLocationId],
+      });
+
+    const [locked] = await tx
+      .select({ quantity: materialStock.quantity })
+      .from(materialStock)
+      .where(
+        and(
+          eq(materialStock.materialId, input.materialId),
+          eq(materialStock.storageLocationId, input.storageLocationId),
+        ),
+      )
+      .for("update");
+    const current = Number(locked?.quantity ?? 0);
     const delta = input.newQuantity - current;
     if (Math.abs(delta) < 0.0005) {
       throw new InactiveReferenceError("Новый остаток совпадает с текущим — корректировка не нужна");
     }
 
-    const absDelta = toDecimalString(Math.abs(delta));
-    if (delta > 0) {
-      await increaseStock(tx, input.materialId, input.storageLocationId, absDelta);
-    } else {
-      await decreaseStock(
-        tx,
-        input.materialId,
-        input.storageLocationId,
-        absDelta,
-        Math.abs(delta),
+    await tx
+      .update(materialStock)
+      .set({ quantity: newQty })
+      .where(
+        and(
+          eq(materialStock.materialId, input.materialId),
+          eq(materialStock.storageLocationId, input.storageLocationId),
+        ),
       );
-    }
 
     const [movement] = await tx
       .insert(stockMovements)

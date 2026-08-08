@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   Table,
   TableBody,
@@ -14,6 +16,7 @@ interface Row {
   comment: string | null;
   balanceAfter: number;
   createdAt: Date;
+  materialId?: string;
   materialName: string;
   unitShortName: string | null;
   storageLocationName: string;
@@ -50,7 +53,13 @@ export function RecentMovementsTable({ rows, showSupplier }: { rows: Row[]; show
                 {formatDateTime(row.createdAt)}
               </TableCell>
               <TableCell className="max-w-[9rem] font-medium whitespace-normal sm:max-w-none">
-                {row.materialName}
+                {row.materialId ? (
+                  <Link href={`/materials/${row.materialId}`} className="hover:underline">
+                    {row.materialName}
+                  </Link>
+                ) : (
+                  row.materialName
+                )}
               </TableCell>
               <TableCell className="hidden sm:table-cell">{row.storageLocationName}</TableCell>
               <TableCell className="text-right whitespace-nowrap">
