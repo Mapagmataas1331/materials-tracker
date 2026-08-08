@@ -32,11 +32,15 @@ function toActionError(error: unknown, fallback: string): ActionResult<never> {
  * is just a regular closure and Next.js rejects it at render time.
  */
 export async function createCategoryRefAction(values: { name: string; extra?: string }): Promise<ActionResult<null>> {
-  return createCategoryAction({ name: values.name });
+  const result = await createCategoryAction({ name: values.name });
+  if (!result.ok) return result;
+  return { ok: true, data: null };
 }
 
 export async function createUnitRefAction(values: { name: string; extra?: string }): Promise<ActionResult<null>> {
-  return createUnitAction({ name: values.name, shortName: values.extra ?? "" });
+  const result = await createUnitAction({ name: values.name, shortName: values.extra ?? "" });
+  if (!result.ok) return result;
+  return { ok: true, data: null };
 }
 
 export async function createSupplierRefAction(values: { name: string; extra?: string }): Promise<ActionResult<null>> {
@@ -47,13 +51,16 @@ export async function createStorageLocationRefAction(values: { name: string; ext
   return createStorageLocationAction({ name: values.name });
 }
 
-export async function createCategoryAction(values: unknown): Promise<ActionResult<null>> {
+export async function createCategoryAction(
+  values: unknown,
+): Promise<ActionResult<{ id: string; name: string }>> {
   try {
     await requireAdmin();
     const parsed = categoryFormSchema.parse(values);
-    await refs.createCategory(parsed.name);
+    const row = await refs.createCategory(parsed.name);
     revalidatePath("/settings");
-    return { ok: true, data: null };
+    revalidatePath("/materials/new");
+    return { ok: true, data: { id: row.id, name: row.name } };
   } catch (error) {
     return toActionError(error, "Не удалось создать категорию");
   }
@@ -70,13 +77,16 @@ export async function setCategoryArchivedAction(id: string, isArchived: boolean)
   }
 }
 
-export async function createUnitAction(values: unknown): Promise<ActionResult<null>> {
+export async function createUnitAction(
+  values: unknown,
+): Promise<ActionResult<{ id: string; name: string; shortName: string }>> {
   try {
     await requireAdmin();
     const parsed = unitFormSchema.parse(values);
-    await refs.createUnit(parsed.name, parsed.shortName);
+    const row = await refs.createUnit(parsed.name, parsed.shortName);
     revalidatePath("/settings");
-    return { ok: true, data: null };
+    revalidatePath("/materials/new");
+    return { ok: true, data: { id: row.id, name: row.name, shortName: row.shortName } };
   } catch (error) {
     return toActionError(error, "Не удалось создать единицу измерения");
   }

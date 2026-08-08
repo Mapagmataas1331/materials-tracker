@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { CreateCategoryDialog } from "@/components/references/create-category-dialog";
+import { CreateUnitDialog } from "@/components/references/create-unit-dialog";
 import { materialFormSchema, type MaterialFormValues } from "@/lib/validators/materials";
 import { createMaterialAction, updateMaterialAction } from "@/server/actions/materials";
 
@@ -26,8 +29,8 @@ interface Option {
 }
 
 export function MaterialForm({
-  categories,
-  units,
+  categories: initialCategories,
+  units: initialUnits,
   material,
 }: {
   categories: Option[];
@@ -42,6 +45,8 @@ export function MaterialForm({
   };
 }) {
   const router = useRouter();
+  const [categories, setCategories] = useState(initialCategories);
+  const [units, setUnits] = useState(initialUnits);
   const {
     register,
     handleSubmit,
@@ -95,7 +100,19 @@ export function MaterialForm({
         </Field>
 
         <Field data-invalid={!!errors.categoryId}>
-          <FieldLabel>Категория</FieldLabel>
+          <div className="flex items-center justify-between gap-2">
+            <FieldLabel>Категория</FieldLabel>
+            <CreateCategoryDialog
+              onCreated={(item) => {
+                setCategories((prev) =>
+                  prev.some((c) => c.id === item.id)
+                    ? prev
+                    : [...prev, item].sort((a, b) => a.name.localeCompare(b.name, "ru")),
+                );
+                setValue("categoryId", item.id, { shouldValidate: true });
+              }}
+            />
+          </div>
           <Select
             items={{
               "": "Выберите категорию",
@@ -119,7 +136,19 @@ export function MaterialForm({
         </Field>
 
         <Field data-invalid={!!errors.unitId}>
-          <FieldLabel>Единица измерения</FieldLabel>
+          <div className="flex items-center justify-between gap-2">
+            <FieldLabel>Единица измерения</FieldLabel>
+            <CreateUnitDialog
+              onCreated={(item) => {
+                setUnits((prev) =>
+                  prev.some((u) => u.id === item.id)
+                    ? prev
+                    : [...prev, item].sort((a, b) => a.name.localeCompare(b.name, "ru")),
+                );
+                setValue("unitId", item.id, { shouldValidate: true });
+              }}
+            />
+          </div>
           <Select
             items={{
               "": "Выберите единицу измерения",
