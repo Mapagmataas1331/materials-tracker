@@ -31,6 +31,11 @@ export async function setCategoryArchived(id: string, isArchived: boolean) {
   return row;
 }
 
+export async function updateCategory(id: string, name: string) {
+  const [row] = await db.update(categories).set({ name }).where(eq(categories.id, id)).returning();
+  return row;
+}
+
 export async function listUnits(includeArchived = false) {
   const rows = await db.select().from(units).orderBy(asc(units.name));
   return includeArchived ? rows : rows.filter((r) => !r.isArchived);
@@ -43,6 +48,15 @@ export async function createUnit(name: string, shortName: string) {
 
 export async function setUnitArchived(id: string, isArchived: boolean) {
   const [row] = await db.update(units).set({ isArchived }).where(eq(units.id, id)).returning();
+  return row;
+}
+
+export async function updateUnit(id: string, name: string, shortName: string) {
+  const [row] = await db
+    .update(units)
+    .set({ name, shortName })
+    .where(eq(units.id, id))
+    .returning();
   return row;
 }
 
@@ -68,6 +82,15 @@ export async function setSupplierArchived(id: string, isArchived: boolean) {
   return row;
 }
 
+export async function updateSupplier(id: string, name: string, contactInfo?: string) {
+  const [row] = await db
+    .update(suppliers)
+    .set({ name, contactInfo: contactInfo || null })
+    .where(eq(suppliers.id, id))
+    .returning();
+  return row;
+}
+
 export async function listStorageLocations(includeArchived = false) {
   const rows = await db.select().from(storageLocations).orderBy(asc(storageLocations.name));
   return includeArchived ? rows : rows.filter((r) => !r.isArchived);
@@ -82,6 +105,15 @@ export async function setStorageLocationArchived(id: string, isArchived: boolean
   const [row] = await db
     .update(storageLocations)
     .set({ isArchived })
+    .where(eq(storageLocations.id, id))
+    .returning();
+  return row;
+}
+
+export async function updateStorageLocation(id: string, name: string) {
+  const [row] = await db
+    .update(storageLocations)
+    .set({ name })
     .where(eq(storageLocations.id, id))
     .returning();
   return row;

@@ -12,7 +12,13 @@ import { StockStatusBadge } from "@/components/materials/stock-status-badge";
 import { formatQuantity } from "@/lib/format";
 import type { MaterialListItem } from "@/server/services/materials";
 
-export function MaterialsTable({ materials }: { materials: MaterialListItem[] }) {
+export function MaterialsTable({
+  materials,
+  showArchivedBadge = false,
+}: {
+  materials: MaterialListItem[];
+  showArchivedBadge?: boolean;
+}) {
   if (materials.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
@@ -35,10 +41,18 @@ export function MaterialsTable({ materials }: { materials: MaterialListItem[] })
         </TableHeader>
         <TableBody>
           {materials.map((material) => (
-            <TableRow key={material.id} className="cursor-pointer">
+            <TableRow
+              key={material.id}
+              className={material.isArchived ? "cursor-pointer opacity-60" : "cursor-pointer"}
+            >
               <TableCell className="max-w-[10rem] font-medium whitespace-normal sm:max-w-none">
                 <Link href={`/materials/${material.id}`} className="block">
                   {material.name}
+                  {showArchivedBadge && material.isArchived && (
+                    <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground">
+                      архив
+                    </span>
+                  )}
                 </Link>
               </TableCell>
               <TableCell className="hidden md:table-cell">

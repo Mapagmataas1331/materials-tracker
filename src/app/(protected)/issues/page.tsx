@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { IssueForm } from "@/components/movements/issue-form";
 import { RecentMovementsTable } from "@/components/movements/recent-movements-table";
+import { MissingRefsNotice } from "@/components/references/missing-refs-notice";
 import { listRecentMovements } from "@/server/services/movements";
 import { listStorageLocations } from "@/server/services/references";
 
@@ -25,7 +26,14 @@ export default async function IssuesPage() {
             <CardTitle>Новое списание</CardTitle>
           </CardHeader>
           <CardContent>
-            <IssueForm storageLocations={storageLocations} />
+            {storageLocations.length > 0 ? (
+              <IssueForm storageLocations={storageLocations} />
+            ) : (
+              <MissingRefsNotice
+                title="Нет мест хранения"
+                description="Добавьте хотя бы одно место хранения в настройках — затем можно оформить списание."
+              />
+            )}
           </CardContent>
         </Card>
 

@@ -45,6 +45,34 @@ export async function createStorageLocationRefAction(values: { name: string; ext
   return createStorageLocationAction({ name: values.name });
 }
 
+export async function updateCategoryRefAction(
+  id: string,
+  values: { name: string; extra?: string },
+): Promise<ActionResult<null>> {
+  return updateCategoryAction(id, { name: values.name });
+}
+
+export async function updateUnitRefAction(
+  id: string,
+  values: { name: string; extra?: string },
+): Promise<ActionResult<null>> {
+  return updateUnitAction(id, { name: values.name, shortName: values.extra ?? "" });
+}
+
+export async function updateSupplierRefAction(
+  id: string,
+  values: { name: string; extra?: string },
+): Promise<ActionResult<null>> {
+  return updateSupplierAction(id, { name: values.name, contactInfo: values.extra });
+}
+
+export async function updateStorageLocationRefAction(
+  id: string,
+  values: { name: string; extra?: string },
+): Promise<ActionResult<null>> {
+  return updateStorageLocationAction(id, { name: values.name });
+}
+
 export async function createCategoryAction(
   values: unknown,
 ): Promise<ActionResult<{ id: string; name: string }>> {
@@ -68,6 +96,20 @@ export async function setCategoryArchivedAction(id: string, isArchived: boolean)
     return { ok: true, data: null };
   } catch (error) {
     return refError(error, "Не удалось изменить категорию");
+  }
+}
+
+export async function updateCategoryAction(id: string, values: unknown): Promise<ActionResult<null>> {
+  try {
+    await requireAdmin();
+    const parsed = categoryFormSchema.parse(values);
+    const row = await refs.updateCategory(id, parsed.name);
+    if (!row) return { ok: false, error: "Категория не найдена" };
+    revalidatePath("/settings");
+    revalidatePath("/materials");
+    return { ok: true, data: null };
+  } catch (error) {
+    return refError(error, "Не удалось сохранить категорию");
   }
 }
 
@@ -97,6 +139,20 @@ export async function setUnitArchivedAction(id: string, isArchived: boolean): Pr
   }
 }
 
+export async function updateUnitAction(id: string, values: unknown): Promise<ActionResult<null>> {
+  try {
+    await requireAdmin();
+    const parsed = unitFormSchema.parse(values);
+    const row = await refs.updateUnit(id, parsed.name, parsed.shortName);
+    if (!row) return { ok: false, error: "Единица измерения не найдена" };
+    revalidatePath("/settings");
+    revalidatePath("/materials");
+    return { ok: true, data: null };
+  } catch (error) {
+    return refError(error, "Не удалось сохранить единицу измерения");
+  }
+}
+
 export async function createSupplierAction(values: unknown): Promise<ActionResult<null>> {
   try {
     await requireAdmin();
@@ -120,6 +176,19 @@ export async function setSupplierArchivedAction(id: string, isArchived: boolean)
   }
 }
 
+export async function updateSupplierAction(id: string, values: unknown): Promise<ActionResult<null>> {
+  try {
+    await requireAdmin();
+    const parsed = supplierFormSchema.parse(values);
+    const row = await refs.updateSupplier(id, parsed.name, parsed.contactInfo);
+    if (!row) return { ok: false, error: "Поставщик не найден" };
+    revalidatePath("/settings");
+    return { ok: true, data: null };
+  } catch (error) {
+    return refError(error, "Не удалось сохранить поставщика");
+  }
+}
+
 export async function createStorageLocationAction(values: unknown): Promise<ActionResult<null>> {
   try {
     await requireAdmin();
@@ -140,5 +209,18 @@ export async function setStorageLocationArchivedAction(id: string, isArchived: b
     return { ok: true, data: null };
   } catch (error) {
     return refError(error, "Не удалось изменить место хранения");
+  }
+}
+
+export async function updateStorageLocationAction(id: string, values: unknown): Promise<ActionResult<null>> {
+  try {
+    await requireAdmin();
+    const parsed = storageLocationFormSchema.parse(values);
+    const row = await refs.updateStorageLocation(id, parsed.name);
+    if (!row) return { ok: false, error: "Место хранения не найдено" };
+    revalidatePath("/settings");
+    return { ok: true, data: null };
+  } catch (error) {
+    return refError(error, "Не удалось сохранить место хранения");
   }
 }

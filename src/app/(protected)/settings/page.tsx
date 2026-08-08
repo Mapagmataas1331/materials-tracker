@@ -21,6 +21,10 @@ import {
   setStorageLocationArchivedAction,
   setSupplierArchivedAction,
   setUnitArchivedAction,
+  updateCategoryRefAction,
+  updateStorageLocationRefAction,
+  updateSupplierRefAction,
+  updateUnitRefAction,
 } from "@/server/actions/references";
 
 export default async function SettingsPage() {
@@ -58,6 +62,7 @@ export default async function SettingsPage() {
             title="Категории материалов"
             items={categories.map((c) => ({ id: c.id, name: c.name, isArchived: c.isArchived }))}
             onCreate={createCategoryRefAction}
+            onUpdate={updateCategoryRefAction}
             onToggleArchived={setCategoryArchivedAction}
           />
         </TabsContent>
@@ -68,6 +73,7 @@ export default async function SettingsPage() {
             extraField={{ key: "shortName", label: "Сокращение", placeholder: "кг, шт, м..." }}
             items={units.map((u) => ({ id: u.id, name: u.name, isArchived: u.isArchived, extra: u.shortName }))}
             onCreate={createUnitRefAction}
+            onUpdate={updateUnitRefAction}
             onToggleArchived={setUnitArchivedAction}
           />
         </TabsContent>
@@ -78,6 +84,7 @@ export default async function SettingsPage() {
             extraField={{ key: "contactInfo", label: "Контакты", placeholder: "Телефон, email..." }}
             items={suppliers.map((s) => ({ id: s.id, name: s.name, isArchived: s.isArchived, extra: s.contactInfo }))}
             onCreate={createSupplierRefAction}
+            onUpdate={updateSupplierRefAction}
             onToggleArchived={setSupplierArchivedAction}
           />
         </TabsContent>
@@ -87,6 +94,7 @@ export default async function SettingsPage() {
             title="Места хранения"
             items={storageLocations.map((l) => ({ id: l.id, name: l.name, isArchived: l.isArchived }))}
             onCreate={createStorageLocationRefAction}
+            onUpdate={updateStorageLocationRefAction}
             onToggleArchived={setStorageLocationArchivedAction}
           />
         </TabsContent>

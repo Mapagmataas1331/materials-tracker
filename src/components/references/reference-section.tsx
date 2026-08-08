@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, ArchiveRestore, Loader2, Plus } from "lucide-react";
+import { Archive, ArchiveRestore, Check, Loader2, Pencil, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ export function ReferenceSection({
   items,
   extraField,
   onCreate,
+  onUpdate,
   onToggleArchived,
 }: {
   title: string;
@@ -43,6 +44,7 @@ export function ReferenceSection({
   items: ReferenceItem[];
   extraField?: ExtraField;
   onCreate: (values: { name: string; extra?: string }) => Promise<ActionResult<null>>;
+  onUpdate: (id: string, values: { name: string; extra?: string }) => Promise<ActionResult<null>>;
   onToggleArchived: (id: string, isArchived: boolean) => Promise<ActionResult<null>>;
 }) {
   const router = useRouter();
@@ -50,6 +52,10 @@ export function ReferenceSection({
   const [extra, setExtra] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editExtra, setEditExtra] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -66,6 +72,40 @@ export function ReferenceSection({
     toast.success("Добавлено");
     setName("");
     setExtra("");
+    router.refresh();
+  }
+
+  function startEdit(item: ReferenceItem) {
+    setEditingId(item.id);
+    setEditName(item.name);
+    setEditExtra(item.extra ?? "");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditName("");
+    setEditExtra("");
+  }
+
+  async function handleSaveEdit(id: string) {
+    if (!editName.trim()) {
+      toast.error("Укажите название");
+      return;
+    }
+    setIsSavingEdit(true);
+    const result = await onUpdate(id, {
+      name: editName.trim(),
+      extra: editExtra.trim() || undefined,
+    });
+    setIsSavingEdit(false);
+
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+
+    toast.success("Сохранено");
+    cancelEdit();
     router.refresh();
   }
 
@@ -115,7 +155,7 @@ export function ReferenceSection({
             <TableRow>
               <TableHead>Название</TableHead>
               {extraField && <TableHead>{extraField.label}</TableHead>}
-              <TableHead className="w-32" />
+              <TableHead className="w-48" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -126,31 +166,97 @@ export function ReferenceSection({
                 </TableCell>
               </TableRow>
             )}
-            {items.map((item) => (
-              <TableRow key={item.id} className={item.isArchived ? "opacity-60" : undefined}>
-                <TableCell className="font-medium">
-                  {item.name}
-                  {item.isArchived && (
-                    <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                      архив
-                    </span>
+            {items.map((item) => {
+              const isEditing = editingId === item.id;
+              return (
+                <TableRow key={item.id} className={item.isArchived ? "opacity-60" : undefined}>
+                  <TableCell className="font-medium">
+                    {isEditing ? (
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="max-w-64"
+                        autoFocus
+                      />
+                    ) : (
+                      <>
+                        {item.name}
+                        {item.isArchived && (
+                          <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                            архив
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </TableCell>
+                  {extraField && (
+                    <TableCell>
+                      {isEditing ? (
+                        <Input
+                          value={editExtra}
+                          onChange={(e) => setEditExtra(e.target.value)}
+                          placeholder={extraField.placeholder ?? extraField.label}
+                          className="max-w-48"
+                        />
+                      ) : (
+                        (item.extra ?? "—")
+                      )}
+                    </TableCell>
                   )}
-                </TableCell>
-                {extraField && <TableCell>{item.extra ?? "—"}</TableCell>}
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="min-h-9"
-                    disabled={pendingId === item.id}
-                    onClick={() => handleToggle(item.id, !item.isArchived)}
-                  >
-                    {item.isArchived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
-                    {item.isArchived ? "Вернуть" : "В архив"}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+                  <TableCell className="text-right">
+                    <div className="flex flex-wrap justify-end gap-1">
+                      {isEditing ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="min-h-9"
+                            disabled={isSavingEdit}
+                            onClick={() => handleSaveEdit(item.id)}
+                          >
+                            {isSavingEdit ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                            Сохранить
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="min-h-9"
+                            disabled={isSavingEdit}
+                            onClick={cancelEdit}
+                          >
+                            <X className="size-4" />
+                            Отмена
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="min-h-9"
+                            disabled={pendingId === item.id}
+                            onClick={() => startEdit(item)}
+                          >
+                            <Pencil className="size-4" />
+                            Изменить
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="min-h-9"
+                            disabled={pendingId === item.id}
+                            onClick={() => handleToggle(item.id, !item.isArchived)}
+                          >
+                            {item.isArchived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
+                            {item.isArchived ? "Вернуть" : "В архив"}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

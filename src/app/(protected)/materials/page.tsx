@@ -11,13 +11,20 @@ import { listCategories, listStorageLocations } from "@/server/services/referenc
 export default async function MaterialsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; location?: string }>;
+  searchParams: Promise<{ q?: string; category?: string; location?: string; archived?: string }>;
 }) {
   const user = await requireUser();
-  const { q, category, location } = await searchParams;
+  const isAdmin = user.role === "admin";
+  const { q, category, location, archived } = await searchParams;
+  const includeArchived = isAdmin && archived === "1";
 
   const [materials, categories, storageLocations] = await Promise.all([
-    listMaterials({ search: q, categoryId: category, storageLocationId: location }),
+    listMaterials({
+      search: q,
+      categoryId: category,
+      storageLocationId: location,
+      includeArchived,
+    }),
     listCategories(),
     listStorageLocations(),
   ]);
@@ -29,9 +36,10 @@ export default async function MaterialsPage({
           <h1 className="text-xl font-semibold">Материалы</h1>
           <p className="text-sm text-muted-foreground">
             {materials.length} {materials.length === 1 ? "материал" : "материалов"} найдено
+            {includeArchived ? " (включая архив)" : ""}
           </p>
         </div>
-        {user.role === "admin" && (
+        {isAdmin && (
           <Button
             className="w-full sm:w-auto"
             render={<Link href="/materials/new" />}
@@ -43,9 +51,13 @@ export default async function MaterialsPage({
         )}
       </div>
 
-      <MaterialsFilterBar categories={categories} storageLocations={storageLocations} />
+      <MaterialsFilterBar
+        categories={categories}
+        storageLocations={storageLocations}
+        isAdmin={isAdmin}
+      />
 
-      <MaterialsTable materials={materials} />
+      <MaterialsTable materials={materials} showArchivedBadge={includeArchived} />
     </div>
   );
 }

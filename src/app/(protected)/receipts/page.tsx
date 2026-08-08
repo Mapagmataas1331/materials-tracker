@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReceiptForm } from "@/components/movements/receipt-form";
 import { RecentMovementsTable } from "@/components/movements/recent-movements-table";
+import { MissingRefsNotice } from "@/components/references/missing-refs-notice";
 import { listRecentMovements } from "@/server/services/movements";
 import { listStorageLocations, listSuppliers } from "@/server/services/references";
 
@@ -10,6 +11,10 @@ export default async function ReceiptsPage() {
     listSuppliers(),
     listRecentMovements("receipt"),
   ]);
+
+  const missingLocations = storageLocations.length === 0;
+  const missingSuppliers = suppliers.length === 0;
+  const canCreate = !missingLocations && !missingSuppliers;
 
   return (
     <div className="space-y-6">
@@ -26,7 +31,20 @@ export default async function ReceiptsPage() {
             <CardTitle>Новое поступление</CardTitle>
           </CardHeader>
           <CardContent>
-            <ReceiptForm storageLocations={storageLocations} suppliers={suppliers} />
+            {canCreate ? (
+              <ReceiptForm storageLocations={storageLocations} suppliers={suppliers} />
+            ) : (
+              <MissingRefsNotice
+                title="Не хватает справочников"
+                description={
+                  missingLocations && missingSuppliers
+                    ? "Добавьте хотя бы одно место хранения и одного поставщика в настройках — затем можно оформить поступление."
+                    : missingLocations
+                      ? "Добавьте хотя бы одно место хранения в настройках — затем можно оформить поступление."
+                      : "Добавьте хотя бы одного поставщика в настройках — затем можно оформить поступление."
+                }
+              />
+            )}
           </CardContent>
         </Card>
 
