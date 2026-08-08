@@ -4,8 +4,10 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { AuditLogTable } from "@/components/audit/audit-log-table";
 import { ReferenceSection } from "@/components/references/reference-section";
 import { requireAdminPage } from "@/lib/current-user";
+import { listAuditLog } from "@/server/services/audit";
 import {
   listCategories,
   listStorageLocations,
@@ -30,11 +32,12 @@ import {
 export default async function SettingsPage() {
   await requireAdminPage();
 
-  const [categories, units, suppliers, storageLocations] = await Promise.all([
+  const [categories, units, suppliers, storageLocations, auditRows] = await Promise.all([
     listCategories(true),
     listUnits(true),
     listSuppliers(true),
     listStorageLocations(true),
+    listAuditLog(100),
   ]);
 
   return (
@@ -42,8 +45,8 @@ export default async function SettingsPage() {
       <div>
         <h1 className="text-xl font-semibold break-words">Настройки</h1>
         <p className="text-sm text-muted-foreground">
-          Справочники: категории, единицы измерения, поставщики и места хранения. Записи не удаляются, а
-          переносятся в архив и перестают предлагаться в новых документах.
+          Справочники и журнал изменений. Записи справочников не удаляются, а переносятся в архив и
+          перестают предлагаться в новых документах.
         </p>
       </div>
 
@@ -54,6 +57,7 @@ export default async function SettingsPage() {
             <TabsTrigger value="units">Единицы измерения</TabsTrigger>
             <TabsTrigger value="suppliers">Поставщики</TabsTrigger>
             <TabsTrigger value="locations">Места хранения</TabsTrigger>
+            <TabsTrigger value="audit">Журнал</TabsTrigger>
           </TabsList>
         </div>
 
@@ -97,6 +101,16 @@ export default async function SettingsPage() {
             onUpdate={updateStorageLocationRefAction}
             onToggleArchived={setStorageLocationArchivedAction}
           />
+        </TabsContent>
+
+        <TabsContent value="audit" className="space-y-3">
+          <div>
+            <h2 className="font-medium">Журнал изменений</h2>
+            <p className="text-sm text-muted-foreground">
+              Последние 100 изменений карточек материалов, справочников и паролей.
+            </p>
+          </div>
+          <AuditLogTable rows={auditRows} />
         </TabsContent>
       </Tabs>
     </div>

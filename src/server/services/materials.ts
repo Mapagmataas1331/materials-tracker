@@ -123,6 +123,12 @@ export async function listMaterials(filters: MaterialListFilters = {}): Promise<
   return filters.onlyBelowMin ? mapped.filter((m) => m.status !== "ok") : mapped;
 }
 
+/** Count of materials that need purchasing — powers the nav badge. */
+export async function countPurchaseListItems(): Promise<number> {
+  const items = await listMaterials({ onlyBelowMin: true });
+  return items.length;
+}
+
 export async function getMaterialById(id: string) {
   const [material] = await db
     .select({

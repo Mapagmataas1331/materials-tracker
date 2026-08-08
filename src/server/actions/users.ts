@@ -3,8 +3,12 @@
 import { revalidatePath } from "next/cache";
 
 import { writeAuditLog } from "@/lib/audit";
-import { requireAdmin } from "@/lib/current-user";
-import { changePasswordFormSchema, createUserFormSchema } from "@/lib/validators/users";
+import { requireAdmin, requireUser } from "@/lib/current-user";
+import {
+  changeOwnPasswordFormSchema,
+  changePasswordFormSchema,
+  createUserFormSchema,
+} from "@/lib/validators/users";
 import * as usersService from "@/server/services/users";
 import { toActionError } from "@/server/actions/to-action-error";
 import type { ActionResult } from "@/server/actions/types";
@@ -52,6 +56,23 @@ export async function changeUserPasswordAction(id: string, values: unknown): Pro
       action: "password_change",
     });
     revalidatePath("/users");
+    return { ok: true, data: null };
+  } catch (error) {
+    return toActionError(error, "Не удалось изменить пароль");
+  }
+}
+
+export async function changeOwnPasswordAction(values: unknown): Promise<ActionResult<null>> {
+  try {
+    const user = await requireUser();
+    const parsed = changeOwnPasswordFormSchema.parse(values);
+    await usersService.changeOwnPassword(user.id, parsed.currentPassword, parsed.password);
+    await writeAuditLog({
+      entityType: "user",
+      entityId: user.id,
+      userId: user.id,
+      action: "password_change_self",
+    });
     return { ok: true, data: null };
   } catch (error) {
     return toActionError(error, "Не удалось изменить пароль");

@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ThemeMenuItems } from "@/components/layout/theme-menu-items";
+import { ChangeOwnPasswordMenuItem } from "@/components/users/change-own-password-dialog";
 import { cn } from "@/lib/utils";
 
 function initials(fullName: string) {
@@ -58,6 +59,8 @@ export function UserMenu({
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <ThemeMenuItems />
+        <DropdownMenuSeparator />
+        <ChangeOwnPasswordMenuItem />
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => signOut({ callbackUrl: "/login" })}>
           <LogOut className="size-4" />

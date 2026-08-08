@@ -3,10 +3,12 @@ import { requireUser } from "@/lib/current-user";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { UserMenu } from "@/components/layout/user-menu";
+import { countPurchaseListItems } from "@/server/services/materials";
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   const isAdmin = user.role === "admin";
+  const purchaseListCount = await countPurchaseListItems();
 
   return (
     <div className="flex min-h-screen overflow-x-hidden">
@@ -15,11 +17,11 @@ export default async function ProtectedLayout({ children }: { children: React.Re
           <LogoIcon className="size-7 shrink-0 text-foreground" />
           <span className="truncate">Учёт материалов</span>
         </div>
-        <SidebarNav isAdmin={isAdmin} />
+        <SidebarNav isAdmin={isAdmin} purchaseListCount={purchaseListCount} />
       </aside>
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex h-14 min-w-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-sm sm:px-4">
-          <MobileNav isAdmin={isAdmin} />
+          <MobileNav isAdmin={isAdmin} purchaseListCount={purchaseListCount} />
           <div className="flex min-w-0 items-center gap-2 truncate font-semibold md:hidden">
             <LogoIcon className="size-7 shrink-0 text-foreground" />
             <span className="truncate">Учёт материалов</span>

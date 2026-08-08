@@ -28,6 +28,19 @@ export const changePasswordFormSchema = z.object({
 
 export type ChangePasswordFormValues = z.infer<typeof changePasswordFormSchema>;
 
+export const changeOwnPasswordFormSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Введите текущий пароль"),
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, "Повторите пароль"),
+  })
+  .refine((v) => v.password === v.confirmPassword, {
+    message: "Пароли не совпадают",
+    path: ["confirmPassword"],
+  });
+
+export type ChangeOwnPasswordFormValues = z.infer<typeof changeOwnPasswordFormSchema>;
+
 export const loginFormSchema = z.object({
   login: z.string().trim().min(1, "Введите логин"),
   password: z.string().min(1, "Введите пароль"),

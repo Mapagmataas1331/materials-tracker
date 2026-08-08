@@ -36,6 +36,10 @@ export function toActionError(
     return { ok: false, error: error.message };
   }
 
+  if (error instanceof Error && error.name === "InvalidCurrentPasswordError") {
+    return { ok: false, error: error.message };
+  }
+
   if (
     options.uniqueMessage &&
     error instanceof Error &&

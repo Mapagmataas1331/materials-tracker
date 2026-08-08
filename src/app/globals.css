@@ -149,3 +149,19 @@
     scrollbar-width: thin;
   }
 }
+
+@media print {
+  aside,
+  header,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  body {
+    background: white !important;
+  }
+}

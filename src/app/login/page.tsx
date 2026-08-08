@@ -4,9 +4,9 @@ import { LoginForm } from "@/components/login-form";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ callbackUrl?: string }>;
+  searchParams: Promise<{ callbackUrl?: string; passwordChanged?: string }>;
 }) {
-  const { callbackUrl } = await searchParams;
+  const { callbackUrl, passwordChanged } = await searchParams;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-10 pb-[max(2.5rem,env(safe-area-inset-bottom))]">
@@ -20,6 +20,14 @@ export default async function LoginPage({
             Внутренняя система учёта материалов на производстве
           </p>
         </div>
+        {passwordChanged === "1" && (
+          <p
+            role="status"
+            className="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-center text-sm text-success-foreground"
+          >
+            Пароль успешно изменён. Войдите с новым паролем.
+          </p>
+        )}
         <LoginForm callbackUrl={callbackUrl} />
       </div>
     </div>

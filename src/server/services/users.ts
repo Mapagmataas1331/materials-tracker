@@ -89,6 +89,29 @@ export async function changeUserPassword(id: string, newPassword: string) {
   return updated ? omitPasswordHash(updated) : null;
 }
 
+export class InvalidCurrentPasswordError extends Error {
+  constructor() {
+    super("Неверный текущий пароль");
+    this.name = "InvalidCurrentPasswordError";
+  }
+}
+
+export async function changeOwnPassword(
+  id: string,
+  currentPassword: string,
+  newPassword: string,
+) {
+  const user = await findUserById(id);
+  if (!user || !user.isActive) {
+    throw new InvalidCurrentPasswordError();
+  }
+  const valid = await verifyPassword(user.passwordHash, currentPassword);
+  if (!valid) {
+    throw new InvalidCurrentPasswordError();
+  }
+  return changeUserPassword(id, newPassword);
+}
+
 export async function updateUserRole(id: string, role: "admin" | "user") {
   const [updated] = await db
     .update(users)
