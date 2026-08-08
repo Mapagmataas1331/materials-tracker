@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -92,4 +92,17 @@ export async function updateUserRole(id: string, role: "admin" | "user") {
     .where(eq(users.id, id))
     .returning();
   return updated ? omitPasswordHash(updated) : null;
+}
+
+/** True when `userId` is an active admin and there are no other active admins. */
+export async function isLastActiveAdmin(userId: string): Promise<boolean> {
+  const user = await findUserById(userId);
+  if (!user || user.role !== "admin" || !user.isActive) return false;
+
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(users)
+    .where(and(eq(users.role, "admin"), eq(users.isActive, true)));
+
+  return Number(row?.count ?? 0) <= 1;
 }

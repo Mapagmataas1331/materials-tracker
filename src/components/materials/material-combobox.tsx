@@ -42,12 +42,16 @@ export function MaterialCombobox({
     const timeout = setTimeout(() => {
       if (cancelled) return;
       setIsLoading(true);
-      searchMaterialsAction(query).then((results) => {
-        if (!cancelled) {
-          setOptions(results);
-          setIsLoading(false);
-        }
-      });
+      searchMaterialsAction(query)
+        .then((results) => {
+          if (!cancelled) setOptions(results);
+        })
+        .catch(() => {
+          if (!cancelled) setOptions([]);
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoading(false);
+        });
     }, 200);
     return () => {
       cancelled = true;

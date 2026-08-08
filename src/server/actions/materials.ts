@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireAdmin } from "@/lib/current-user";
+import { requireAdmin, requireUser } from "@/lib/current-user";
 import { materialFormSchema } from "@/lib/validators/materials";
 import * as materialsService from "@/server/services/materials";
+import { toActionError } from "@/server/actions/to-action-error";
 import type { ActionResult } from "@/server/actions/types";
 
 export async function createMaterialAction(values: unknown): Promise<ActionResult<{ id: string }>> {
@@ -45,21 +46,11 @@ export async function setMaterialArchivedAction(id: string, isArchived: boolean)
 }
 
 export async function searchMaterialsAction(query: string) {
+  await requireUser();
   return materialsService.searchMaterialsForAutocomplete(query);
 }
 
 export async function getStockAtLocationAction(materialId: string, storageLocationId: string) {
+  await requireUser();
   return materialsService.getStockAtLocation(materialId, storageLocationId);
-}
-
-function toActionError(error: unknown, fallback: string): ActionResult<never> {
-  if (error instanceof Error && error.name === "ForbiddenError") {
-    return { ok: false, error: error.message };
-  }
-  if (error && typeof error === "object" && "issues" in error) {
-    // zod error
-    return { ok: false, error: fallback };
-  }
-  console.error(fallback, error);
-  return { ok: false, error: fallback };
 }

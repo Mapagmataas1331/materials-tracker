@@ -10,17 +10,11 @@ import {
   unitFormSchema,
 } from "@/lib/validators/references";
 import * as refs from "@/server/services/references";
+import { toActionError } from "@/server/actions/to-action-error";
 import type { ActionResult } from "@/server/actions/types";
 
-function toActionError(error: unknown, fallback: string): ActionResult<never> {
-  if (error instanceof Error && error.name === "ForbiddenError") {
-    return { ok: false, error: error.message };
-  }
-  if (error instanceof Error && "code" in error && (error as { code?: string }).code === "23505") {
-    return { ok: false, error: "Такое название уже существует" };
-  }
-  console.error(fallback, error);
-  return { ok: false, error: fallback };
+function refError(error: unknown, fallback: string): ActionResult<never> {
+  return toActionError(error, fallback, { uniqueMessage: "Такое название уже существует" });
 }
 
 /**
@@ -62,7 +56,7 @@ export async function createCategoryAction(
     revalidatePath("/materials/new");
     return { ok: true, data: { id: row.id, name: row.name } };
   } catch (error) {
-    return toActionError(error, "Не удалось создать категорию");
+    return refError(error, "Не удалось создать категорию");
   }
 }
 
@@ -73,7 +67,7 @@ export async function setCategoryArchivedAction(id: string, isArchived: boolean)
     revalidatePath("/settings");
     return { ok: true, data: null };
   } catch (error) {
-    return toActionError(error, "Не удалось изменить категорию");
+    return refError(error, "Не удалось изменить категорию");
   }
 }
 
@@ -88,7 +82,7 @@ export async function createUnitAction(
     revalidatePath("/materials/new");
     return { ok: true, data: { id: row.id, name: row.name, shortName: row.shortName } };
   } catch (error) {
-    return toActionError(error, "Не удалось создать единицу измерения");
+    return refError(error, "Не удалось создать единицу измерения");
   }
 }
 
@@ -99,7 +93,7 @@ export async function setUnitArchivedAction(id: string, isArchived: boolean): Pr
     revalidatePath("/settings");
     return { ok: true, data: null };
   } catch (error) {
-    return toActionError(error, "Не удалось изменить единицу измерения");
+    return refError(error, "Не удалось изменить единицу измерения");
   }
 }
 
@@ -111,7 +105,7 @@ export async function createSupplierAction(values: unknown): Promise<ActionResul
     revalidatePath("/settings");
     return { ok: true, data: null };
   } catch (error) {
-    return toActionError(error, "Не удалось создать поставщика");
+    return refError(error, "Не удалось создать поставщика");
   }
 }
 
@@ -122,7 +116,7 @@ export async function setSupplierArchivedAction(id: string, isArchived: boolean)
     revalidatePath("/settings");
     return { ok: true, data: null };
   } catch (error) {
-    return toActionError(error, "Не удалось изменить поставщика");
+    return refError(error, "Не удалось изменить поставщика");
   }
 }
 
@@ -134,7 +128,7 @@ export async function createStorageLocationAction(values: unknown): Promise<Acti
     revalidatePath("/settings");
     return { ok: true, data: null };
   } catch (error) {
-    return toActionError(error, "Не удалось создать место хранения");
+    return refError(error, "Не удалось создать место хранения");
   }
 }
 
@@ -145,6 +139,6 @@ export async function setStorageLocationArchivedAction(id: string, isArchived: b
     revalidatePath("/settings");
     return { ok: true, data: null };
   } catch (error) {
-    return toActionError(error, "Не удалось изменить место хранения");
+    return refError(error, "Не удалось изменить место хранения");
   }
 }

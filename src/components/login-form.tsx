@@ -16,6 +16,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import { safeCallbackUrl } from "@/lib/safe-callback-url";
 import { loginFormSchema, type LoginFormValues } from "@/lib/validators/users";
 
 export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
@@ -40,7 +41,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
       return;
     }
 
-    router.push(callbackUrl && callbackUrl.startsWith("/") ? callbackUrl : "/materials");
+    router.push(safeCallbackUrl(callbackUrl));
     router.refresh();
   }
 

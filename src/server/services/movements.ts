@@ -10,6 +10,45 @@ export class InsufficientStockError extends Error {
   }
 }
 
+export class InactiveReferenceError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InactiveReferenceError";
+  }
+}
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function assertActiveMaterial(tx: Tx, materialId: string) {
+  const [row] = await tx
+    .select({ id: materials.id, isArchived: materials.isArchived })
+    .from(materials)
+    .where(eq(materials.id, materialId))
+    .limit(1);
+  if (!row) throw new InactiveReferenceError("Материал не найден");
+  if (row.isArchived) throw new InactiveReferenceError("Нельзя оформить операцию по архивному материалу");
+}
+
+async function assertActiveStorageLocation(tx: Tx, storageLocationId: string) {
+  const [row] = await tx
+    .select({ id: storageLocations.id, isArchived: storageLocations.isArchived })
+    .from(storageLocations)
+    .where(eq(storageLocations.id, storageLocationId))
+    .limit(1);
+  if (!row) throw new InactiveReferenceError("Место хранения не найдено");
+  if (row.isArchived) throw new InactiveReferenceError("Место хранения в архиве");
+}
+
+async function assertActiveSupplier(tx: Tx, supplierId: string) {
+  const [row] = await tx
+    .select({ id: suppliers.id, isArchived: suppliers.isArchived })
+    .from(suppliers)
+    .where(eq(suppliers.id, supplierId))
+    .limit(1);
+  if (!row) throw new InactiveReferenceError("Поставщик не найден");
+  if (row.isArchived) throw new InactiveReferenceError("Поставщик в архиве");
+}
+
 export interface CreateReceiptInput {
   materialId: string;
   storageLocationId: string;
@@ -29,6 +68,10 @@ export interface CreateReceiptInput {
  */
 export async function createReceipt(input: CreateReceiptInput) {
   return db.transaction(async (tx) => {
+    await assertActiveMaterial(tx, input.materialId);
+    await assertActiveStorageLocation(tx, input.storageLocationId);
+    await assertActiveSupplier(tx, input.supplierId);
+
     const [stockRow] = await tx
       .insert(materialStock)
       .values({
@@ -113,6 +156,9 @@ export interface CreateIssueInput {
  */
 export async function createIssue(input: CreateIssueInput) {
   return db.transaction(async (tx) => {
+    await assertActiveMaterial(tx, input.materialId);
+    await assertActiveStorageLocation(tx, input.storageLocationId);
+
     const [stockRow] = await tx
       .update(materialStock)
       .set({ quantity: sql`${materialStock.quantity} - ${input.quantity}` })
