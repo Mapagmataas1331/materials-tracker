@@ -1,0 +1,140 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+import { requireAdmin } from "@/lib/current-user";
+import {
+  categoryFormSchema,
+  storageLocationFormSchema,
+  supplierFormSchema,
+  unitFormSchema,
+} from "@/lib/validators/references";
+import * as refs from "@/server/services/references";
+import type { ActionResult } from "@/server/actions/types";
+
+function toActionError(error: unknown, fallback: string): ActionResult<never> {
+  if (error instanceof Error && error.name === "ForbiddenError") {
+    return { ok: false, error: error.message };
+  }
+  if (error instanceof Error && "code" in error && (error as { code?: string }).code === "23505") {
+    return { ok: false, error: "Такое название уже существует" };
+  }
+  console.error(fallback, error);
+  return { ok: false, error: fallback };
+}
+
+/**
+ * Thin adapters with a uniform {name, extra?} shape so the generic
+ * <ReferenceSection> Client Component can receive them directly as props.
+ * Server Actions can cross the server/client boundary as props only when
+ * passed by reference (a "use server" function) — a plain arrow function
+ * wrapping one (e.g. `(v) => createCategoryAction({ name: v.name })`)
+ * is just a regular closure and Next.js rejects it at render time.
+ */
+export async function createCategoryRefAction(values: { name: string; extra?: string }): Promise<ActionResult<null>> {
+  return createCategoryAction({ name: values.name });
+}
+
+export async function createUnitRefAction(values: { name: string; extra?: string }): Promise<ActionResult<null>> {
+  return createUnitAction({ name: values.name, shortName: values.extra ?? "" });
+}
+
+export async function createSupplierRefAction(values: { name: string; extra?: string }): Promise<ActionResult<null>> {
+  return createSupplierAction({ name: values.name, contactInfo: values.extra });
+}
+
+export async function createStorageLocationRefAction(values: { name: string; extra?: string }): Promise<ActionResult<null>> {
+  return createStorageLocationAction({ name: values.name });
+}
+
+export async function createCategoryAction(values: unknown): Promise<ActionResult<null>> {
+  try {
+    await requireAdmin();
+    const parsed = categoryFormSchema.parse(values);
+    await refs.createCategory(parsed.name);
+    revalidatePath("/settings");
+    return { ok: true, data: null };
+  } catch (error) {
+    return toActionError(error, "Не удалось создать категорию");
+  }
+}
+
+export async function setCategoryArchivedAction(id: string, isArchived: boolean): Promise<ActionResult<null>> {
+  try {
+    await requireAdmin();
+    await refs.setCategoryArchived(id, isArchived);
+    revalidatePath("/settings");
+    return { ok: true, data: null };
+  } catch (error) {
+    return toActionError(error, "Не удалось изменить категорию");
+  }
+}
+
+export async function createUnitAction(values: unknown): Promise<ActionResult<null>> {
+  try {
+    await requireAdmin();
+    const parsed = unitFormSchema.parse(values);
+    await refs.createUnit(parsed.name, parsed.shortName);
+    revalidatePath("/settings");
+    return { ok: true, data: null };
+  } catch (error) {
+    return toActionError(error, "Не удалось создать единицу измерения");
+  }
+}
+
+export async function setUnitArchivedAction(id: string, isArchived: boolean): Promise<ActionResult<null>> {
+  try {
+    await requireAdmin();
+    await refs.setUnitArchived(id, isArchived);
+    revalidatePath("/settings");
+    return { ok: true, data: null };
+  } catch (error) {
+    return toActionError(error, "Не удалось изменить единицу измерения");
+  }
+}
+
+export async function createSupplierAction(values: unknown): Promise<ActionResult<null>> {
+  try {
+    await requireAdmin();
+    const parsed = supplierFormSchema.parse(values);
+    await refs.createSupplier(parsed.name, parsed.contactInfo);
+    revalidatePath("/settings");
+    return { ok: true, data: null };
+  } catch (error) {
+    return toActionError(error, "Не удалось создать поставщика");
+  }
+}
+
+export async function setSupplierArchivedAction(id: string, isArchived: boolean): Promise<ActionResult<null>> {
+  try {
+    await requireAdmin();
+    await refs.setSupplierArchived(id, isArchived);
+    revalidatePath("/settings");
+    return { ok: true, data: null };
+  } catch (error) {
+    return toActionError(error, "Не удалось изменить поставщика");
+  }
+}
+
+export async function createStorageLocationAction(values: unknown): Promise<ActionResult<null>> {
+  try {
+    await requireAdmin();
+    const parsed = storageLocationFormSchema.parse(values);
+    await refs.createStorageLocation(parsed.name);
+    revalidatePath("/settings");
+    return { ok: true, data: null };
+  } catch (error) {
+    return toActionError(error, "Не удалось создать место хранения");
+  }
+}
+
+export async function setStorageLocationArchivedAction(id: string, isArchived: boolean): Promise<ActionResult<null>> {
+  try {
+    await requireAdmin();
+    await refs.setStorageLocationArchived(id, isArchived);
+    revalidatePath("/settings");
+    return { ok: true, data: null };
+  } catch (error) {
+    return toActionError(error, "Не удалось изменить место хранения");
+  }
+}

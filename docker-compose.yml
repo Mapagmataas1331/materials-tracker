@@ -1,0 +1,70 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: materials_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+      POSTGRES_DB: materials
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./docker/init-extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U materials_app -d materials"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Не публикуем 5432 наружу — база доступна только внутри docker-сети,
+    # обращаться к ней могут только контейнеры этого compose-проекта.
+    expose:
+      - "5432"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://materials_app:${POSTGRES_PASSWORD:-change_me}@db:5432/materials
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      NODE_ENV: production
+    # Порт приложения публикуется только на localhost сервера (не на всю
+    # локальную сеть). Это нужно двум сценариям одновременно:
+    #  - профилю "proxy" не нужно — он обращается к app по имени "app"
+    #    внутри docker-сети — но публикация на localhost не мешает;
+    #  - варианту без встроенного прокси (см. README, «Готовые варианты
+    #    запуска») — тогда на этот же сервер можно поставить свой nginx/другой
+    #    reverse proxy и настроить его на 127.0.0.1:3000.
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  # Обратный прокси-сервер: принимает HTTPS-соединения на 443 и перенаправляет
+  # запросы на приложение внутри docker-сети. Сертификат по умолчанию
+  # самоподписанный (см. README, раздел про HTTPS) — для внутренней сети
+  # предприятия этого достаточно; браузер один раз попросит подтвердить
+  # доверие к сертификату.
+  #
+  # Входит в профиль "proxy" — по умолчанию включён через COMPOSE_PROFILES
+  # в .env (см. README, «Готовые варианты запуска»). Если на сервере уже
+  # есть свой nginx/reverse proxy, профиль можно отключить — тогда этот
+  # контейнер просто не будет создан, а внешний прокси нужно нацелить на
+  # 127.0.0.1:3000 (порт приложения выше).
+  proxy:
+    image: nginx:alpine
+    profiles: ["proxy"]
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/certs:/etc/nginx/certs:ro
+
+volumes:
+  db_data:
