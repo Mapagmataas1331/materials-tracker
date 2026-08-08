@@ -1,7 +1,9 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
+  integer,
   jsonb,
   numeric,
   pgEnum,
@@ -39,6 +41,8 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   role: userRoleEnum("role").notNull().default("user"),
   isActive: boolean("is_active").notNull().default(true),
+  /** Bumped on password change so existing JWTs are rejected in the session callback. */
+  sessionVersion: integer("session_version").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
@@ -99,6 +103,7 @@ export const materials = pgTable("materials", {
   // because drizzle-kit's index builder cannot express a custom
   // operator class (gin_trgm_ops) yet.
   categoryIdx: index("materials_category_idx").on(table.categoryId),
+  nameUnique: uniqueIndex("materials_name_unique").on(table.name),
 }));
 
 /**
@@ -114,6 +119,7 @@ export const materialStock = pgTable("material_stock", {
   quantity: numeric("quantity", { precision: 14, scale: 3 }).notNull().default("0"),
 }, (table) => ({
   pk: uniqueIndex("material_stock_pk").on(table.materialId, table.storageLocationId),
+  quantityNonNegative: check("material_stock_quantity_non_negative", sql`${table.quantity} >= 0`),
 }));
 
 /**

@@ -1,6 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
+import { toDecimalString } from "@/lib/decimal";
 import { materialStock, materials, storageLocations, stockMovements, suppliers, units, users } from "@/db/schema";
 
 export class InsufficientStockError extends Error {
@@ -49,6 +50,70 @@ async function assertActiveSupplier(tx: Tx, supplierId: string) {
   if (row.isArchived) throw new InactiveReferenceError("Поставщик в архиве");
 }
 
+async function getLocationQuantity(
+  tx: Tx,
+  materialId: string,
+  storageLocationId: string,
+): Promise<number> {
+  const [existing] = await tx
+    .select({ quantity: materialStock.quantity })
+    .from(materialStock)
+    .where(
+      and(
+        eq(materialStock.materialId, materialId),
+        eq(materialStock.storageLocationId, storageLocationId),
+      ),
+    );
+  return existing ? Number(existing.quantity) : 0;
+}
+
+async function increaseStock(
+  tx: Tx,
+  materialId: string,
+  storageLocationId: string,
+  qty: string,
+) {
+  const [stockRow] = await tx
+    .insert(materialStock)
+    .values({
+      materialId,
+      storageLocationId,
+      quantity: qty,
+    })
+    .onConflictDoUpdate({
+      target: [materialStock.materialId, materialStock.storageLocationId],
+      set: { quantity: sql`${materialStock.quantity} + ${qty}::numeric` },
+    })
+    .returning({ quantity: materialStock.quantity });
+  return stockRow;
+}
+
+async function decreaseStock(
+  tx: Tx,
+  materialId: string,
+  storageLocationId: string,
+  qty: string,
+  requested: number,
+) {
+  const [stockRow] = await tx
+    .update(materialStock)
+    .set({ quantity: sql`${materialStock.quantity} - ${qty}::numeric` })
+    .where(
+      and(
+        eq(materialStock.materialId, materialId),
+        eq(materialStock.storageLocationId, storageLocationId),
+        sql`${materialStock.quantity} >= ${qty}::numeric`,
+      ),
+    )
+    .returning({ quantity: materialStock.quantity });
+
+  if (!stockRow) {
+    const available = await getLocationQuantity(tx, materialId, storageLocationId);
+    throw new InsufficientStockError(available, requested);
+  }
+  return stockRow;
+}
+
 export interface CreateReceiptInput {
   materialId: string;
   storageLocationId: string;
@@ -67,23 +132,13 @@ export interface CreateReceiptInput {
  * increments are applied correctly — no explicit locking code needed.
  */
 export async function createReceipt(input: CreateReceiptInput) {
+  const qty = toDecimalString(input.quantity);
   return db.transaction(async (tx) => {
     await assertActiveMaterial(tx, input.materialId);
     await assertActiveStorageLocation(tx, input.storageLocationId);
     await assertActiveSupplier(tx, input.supplierId);
 
-    const [stockRow] = await tx
-      .insert(materialStock)
-      .values({
-        materialId: input.materialId,
-        storageLocationId: input.storageLocationId,
-        quantity: input.quantity.toString(),
-      })
-      .onConflictDoUpdate({
-        target: [materialStock.materialId, materialStock.storageLocationId],
-        set: { quantity: sql`${materialStock.quantity} + ${input.quantity}` },
-      })
-      .returning({ quantity: materialStock.quantity });
+    const stockRow = await increaseStock(tx, input.materialId, input.storageLocationId, qty);
 
     const [movement] = await tx
       .insert(stockMovements)
@@ -91,8 +146,8 @@ export async function createReceipt(input: CreateReceiptInput) {
         type: "receipt",
         materialId: input.materialId,
         storageLocationId: input.storageLocationId,
-        quantity: input.quantity.toString(),
-        unitCost: input.unitCost !== undefined ? input.unitCost.toString() : null,
+        quantity: qty,
+        unitCost: input.unitCost !== undefined ? toDecimalString(input.unitCost, 2) : null,
         supplierId: input.supplierId,
         userId: input.userId,
         comment: input.comment || null,
@@ -155,34 +210,18 @@ export interface CreateIssueInput {
  * already-decremented value and correctly gets zero rows back.
  */
 export async function createIssue(input: CreateIssueInput) {
+  const qty = toDecimalString(input.quantity);
   return db.transaction(async (tx) => {
     await assertActiveMaterial(tx, input.materialId);
     await assertActiveStorageLocation(tx, input.storageLocationId);
 
-    const [stockRow] = await tx
-      .update(materialStock)
-      .set({ quantity: sql`${materialStock.quantity} - ${input.quantity}` })
-      .where(
-        and(
-          eq(materialStock.materialId, input.materialId),
-          eq(materialStock.storageLocationId, input.storageLocationId),
-          sql`${materialStock.quantity} >= ${input.quantity}`
-        )
-      )
-      .returning({ quantity: materialStock.quantity });
-
-    if (!stockRow) {
-      const [existing] = await tx
-        .select({ quantity: materialStock.quantity })
-        .from(materialStock)
-        .where(
-          and(
-            eq(materialStock.materialId, input.materialId),
-            eq(materialStock.storageLocationId, input.storageLocationId)
-          )
-        );
-      throw new InsufficientStockError(existing ? Number(existing.quantity) : 0, input.quantity);
-    }
+    const stockRow = await decreaseStock(
+      tx,
+      input.materialId,
+      input.storageLocationId,
+      qty,
+      input.quantity,
+    );
 
     const [movement] = await tx
       .insert(stockMovements)
@@ -190,7 +229,7 @@ export async function createIssue(input: CreateIssueInput) {
         type: "issue",
         materialId: input.materialId,
         storageLocationId: input.storageLocationId,
-        quantity: input.quantity.toString(),
+        quantity: qty,
         userId: input.userId,
         comment: input.comment || null,
         balanceAfter: stockRow.quantity,
@@ -198,5 +237,137 @@ export async function createIssue(input: CreateIssueInput) {
       .returning();
 
     return movement;
+  });
+}
+
+export interface CreateAdjustmentInput {
+  materialId: string;
+  storageLocationId: string;
+  /** Absolute stock quantity after inventory count. */
+  newQuantity: number;
+  comment: string;
+  userId: string;
+}
+
+/**
+ * Inventory correction: set stock at a location to an absolute quantity.
+ * Ledger stores a signed delta under type `adjustment`.
+ */
+export async function createAdjustment(input: CreateAdjustmentInput) {
+  const newQty = toDecimalString(input.newQuantity);
+  return db.transaction(async (tx) => {
+    await assertActiveMaterial(tx, input.materialId);
+    await assertActiveStorageLocation(tx, input.storageLocationId);
+
+    const current = await getLocationQuantity(tx, input.materialId, input.storageLocationId);
+    const delta = input.newQuantity - current;
+    if (Math.abs(delta) < 0.0005) {
+      throw new InactiveReferenceError("Новый остаток совпадает с текущим — корректировка не нужна");
+    }
+
+    const absDelta = toDecimalString(Math.abs(delta));
+    if (delta > 0) {
+      await increaseStock(tx, input.materialId, input.storageLocationId, absDelta);
+    } else {
+      await decreaseStock(
+        tx,
+        input.materialId,
+        input.storageLocationId,
+        absDelta,
+        Math.abs(delta),
+      );
+    }
+
+    const [movement] = await tx
+      .insert(stockMovements)
+      .values({
+        type: "adjustment",
+        materialId: input.materialId,
+        storageLocationId: input.storageLocationId,
+        quantity: toDecimalString(delta),
+        userId: input.userId,
+        comment: input.comment,
+        balanceAfter: newQty,
+      })
+      .returning();
+
+    return { movement, previousQuantity: current, balanceAfter: input.newQuantity };
+  });
+}
+
+export interface CreateTransferInput {
+  materialId: string;
+  fromStorageLocationId: string;
+  toStorageLocationId: string;
+  quantity: number;
+  comment?: string;
+  userId: string;
+}
+
+/** Move stock between locations in one transaction (two adjustment legs). */
+export async function createTransfer(input: CreateTransferInput) {
+  if (input.fromStorageLocationId === input.toStorageLocationId) {
+    throw new InactiveReferenceError("Выберите разные места хранения");
+  }
+
+  const qty = toDecimalString(input.quantity);
+  return db.transaction(async (tx) => {
+    await assertActiveMaterial(tx, input.materialId);
+    await assertActiveStorageLocation(tx, input.fromStorageLocationId);
+    await assertActiveStorageLocation(tx, input.toStorageLocationId);
+
+    const [fromLoc] = await tx
+      .select({ name: storageLocations.name })
+      .from(storageLocations)
+      .where(eq(storageLocations.id, input.fromStorageLocationId))
+      .limit(1);
+    const [toLoc] = await tx
+      .select({ name: storageLocations.name })
+      .from(storageLocations)
+      .where(eq(storageLocations.id, input.toStorageLocationId))
+      .limit(1);
+
+    const fromBalance = await decreaseStock(
+      tx,
+      input.materialId,
+      input.fromStorageLocationId,
+      qty,
+      input.quantity,
+    );
+    const toBalance = await increaseStock(
+      tx,
+      input.materialId,
+      input.toStorageLocationId,
+      qty,
+    );
+
+    const note = input.comment?.trim();
+    const fromComment = note
+      ? `Перемещение → ${toLoc?.name ?? "?"}. ${note}`
+      : `Перемещение → ${toLoc?.name ?? "?"}`;
+    const toComment = note
+      ? `Перемещение ← ${fromLoc?.name ?? "?"}. ${note}`
+      : `Перемещение ← ${fromLoc?.name ?? "?"}`;
+
+    await tx.insert(stockMovements).values([
+      {
+        type: "adjustment",
+        materialId: input.materialId,
+        storageLocationId: input.fromStorageLocationId,
+        quantity: toDecimalString(-input.quantity),
+        userId: input.userId,
+        comment: fromComment,
+        balanceAfter: fromBalance.quantity,
+      },
+      {
+        type: "adjustment",
+        materialId: input.materialId,
+        storageLocationId: input.toStorageLocationId,
+        quantity: qty,
+        userId: input.userId,
+        comment: toComment,
+        balanceAfter: toBalance.quantity,
+      },
+    ]);
   });
 }

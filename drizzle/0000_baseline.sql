@@ -20,7 +20,8 @@ CREATE TABLE "categories" (
 CREATE TABLE "material_stock" (
 	"material_id" uuid NOT NULL,
 	"storage_location_id" uuid NOT NULL,
-	"quantity" numeric(14, 3) DEFAULT '0' NOT NULL
+	"quantity" numeric(14, 3) DEFAULT '0' NOT NULL,
+	CONSTRAINT "material_stock_quantity_non_negative" CHECK ("material_stock"."quantity" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "materials" (
@@ -79,6 +80,7 @@ CREATE TABLE "users" (
 	"password_hash" text NOT NULL,
 	"role" "user_role" DEFAULT 'user' NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
+	"session_version" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -96,6 +98,7 @@ CREATE INDEX "audit_log_entity_idx" ON "audit_log" USING btree ("entity_type","e
 CREATE UNIQUE INDEX "categories_name_unique" ON "categories" USING btree ("name");--> statement-breakpoint
 CREATE UNIQUE INDEX "material_stock_pk" ON "material_stock" USING btree ("material_id","storage_location_id");--> statement-breakpoint
 CREATE INDEX "materials_category_idx" ON "materials" USING btree ("category_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "materials_name_unique" ON "materials" USING btree ("name");--> statement-breakpoint
 CREATE INDEX "stock_movements_material_idx" ON "stock_movements" USING btree ("material_id","created_at");--> statement-breakpoint
 CREATE INDEX "stock_movements_created_at_idx" ON "stock_movements" USING btree ("created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "storage_locations_name_unique" ON "storage_locations" USING btree ("name");--> statement-breakpoint

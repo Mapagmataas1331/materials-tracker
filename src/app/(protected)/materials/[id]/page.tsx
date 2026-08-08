@@ -14,9 +14,13 @@ import {
 } from "@/components/ui/table";
 import { StockStatusBadge } from "@/components/materials/stock-status-badge";
 import { ArchiveMaterialButton } from "@/components/materials/archive-material-button";
+import { AdjustmentForm } from "@/components/movements/adjustment-form";
+import { TransferForm } from "@/components/movements/transfer-form";
+import { absoluteQuantity, movementQuantitySign } from "@/lib/decimal";
 import { requireUser } from "@/lib/current-user";
 import { formatDateTime, formatQuantity, MOVEMENT_TYPE_LABELS } from "@/lib/format";
 import { getMaterialById, getMaterialHistory } from "@/server/services/materials";
+import { listStorageLocations } from "@/server/services/references";
 
 export default async function MaterialDetailPage({
   params,
@@ -29,12 +33,18 @@ export default async function MaterialDetailPage({
   const material = await getMaterialById(id);
   if (!material) notFound();
 
-  const history = await getMaterialHistory(id);
+  const [history, storageLocations] = await Promise.all([
+    getMaterialHistory(id),
+    listStorageLocations(),
+  ]);
+
+  const isAdmin = user.role === "admin";
+  const showStockOps = isAdmin && !material.isArchived && storageLocations.length > 0;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <h1 className="text-xl font-semibold break-words">{material.name}</h1>
             {material.isArchived && (
@@ -47,7 +57,7 @@ export default async function MaterialDetailPage({
             {material.categoryName} · {material.unitName}
           </p>
         </div>
-        {user.role === "admin" && (
+        {isAdmin && (
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <Button
               variant="outline"
@@ -104,7 +114,7 @@ export default async function MaterialDetailPage({
         {material.stockByLocation.length === 0 ? (
           <p className="text-sm text-muted-foreground">Остатков нет.</p>
         ) : (
-          <div className="overflow-hidden rounded-lg border">
+          <div className="min-w-0 w-full overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -127,12 +137,43 @@ export default async function MaterialDetailPage({
         )}
       </div>
 
+      {showStockOps && (
+        <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+          <Card className="min-w-0">
+            <CardHeader>
+              <CardTitle>Корректировка остатка</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AdjustmentForm
+                materialId={material.id}
+                unitShortName={material.unitShortName}
+                storageLocations={storageLocations}
+                currentByLocation={material.stockByLocation}
+              />
+            </CardContent>
+          </Card>
+          <Card className="min-w-0">
+            <CardHeader>
+              <CardTitle>Перемещение между местами</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TransferForm
+                materialId={material.id}
+                unitShortName={material.unitShortName}
+                storageLocations={storageLocations}
+                stockByLocation={material.stockByLocation}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <div>
         <h2 className="mb-2 text-sm font-semibold text-muted-foreground">История операций</h2>
         {history.length === 0 ? (
           <p className="text-sm text-muted-foreground">Операций пока не было.</p>
         ) : (
-          <div className="overflow-hidden rounded-lg border">
+          <div className="min-w-0 w-full overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -150,11 +191,13 @@ export default async function MaterialDetailPage({
                 {history.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell className="whitespace-nowrap">{formatDateTime(row.createdAt)}</TableCell>
-                    <TableCell className="whitespace-nowrap">{MOVEMENT_TYPE_LABELS[row.type] ?? row.type}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {MOVEMENT_TYPE_LABELS[row.type] ?? row.type}
+                    </TableCell>
                     <TableCell className="hidden sm:table-cell">{row.storageLocationName}</TableCell>
                     <TableCell className="text-right">
-                      {row.type === "issue" ? "-" : "+"}
-                      {formatQuantity(row.quantity)} {material.unitShortName}
+                      {movementQuantitySign(row.type, row.quantity)}
+                      {formatQuantity(absoluteQuantity(row.quantity))} {material.unitShortName}
                     </TableCell>
                     <TableCell className="hidden text-right md:table-cell">
                       {formatQuantity(row.balanceAfter)} {material.unitShortName}

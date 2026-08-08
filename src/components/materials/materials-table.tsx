@@ -28,7 +28,7 @@ export function MaterialsTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className="min-w-0 w-full overflow-x-auto rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow>

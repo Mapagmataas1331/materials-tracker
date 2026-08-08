@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { writeAuditLog } from "@/lib/audit";
 import { requireAdmin } from "@/lib/current-user";
 import { changePasswordFormSchema, createUserFormSchema } from "@/lib/validators/users";
 import * as usersService from "@/server/services/users";
@@ -41,9 +42,15 @@ export async function setUserActiveAction(id: string, isActive: boolean): Promis
 
 export async function changeUserPasswordAction(id: string, values: unknown): Promise<ActionResult<null>> {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     const parsed = changePasswordFormSchema.parse(values);
     await usersService.changeUserPassword(id, parsed.password);
+    await writeAuditLog({
+      entityType: "user",
+      entityId: id,
+      userId: admin.id,
+      action: "password_change",
+    });
     revalidatePath("/users");
     return { ok: true, data: null };
   } catch (error) {

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { writeAuditLog } from "@/lib/audit";
 import { requireAdmin, requireUser } from "@/lib/current-user";
 import { materialFormSchema } from "@/lib/validators/materials";
 import * as materialsService from "@/server/services/materials";
@@ -10,33 +11,59 @@ import type { ActionResult } from "@/server/actions/types";
 
 export async function createMaterialAction(values: unknown): Promise<ActionResult<{ id: string }>> {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     const parsed = materialFormSchema.parse(values);
     const material = await materialsService.createMaterial(parsed);
+    await writeAuditLog({
+      entityType: "material",
+      entityId: material.id,
+      userId: admin.id,
+      action: "create",
+      changes: { name: material.name },
+    });
     revalidatePath("/materials");
     return { ok: true, data: { id: material.id } };
   } catch (error) {
-    return toActionError(error, "Не удалось создать материал");
+    return toActionError(error, "Не удалось создать материал", {
+      uniqueMessage: "Материал с таким названием уже существует",
+    });
   }
 }
 
 export async function updateMaterialAction(id: string, values: unknown): Promise<ActionResult<null>> {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     const parsed = materialFormSchema.parse(values);
-    await materialsService.updateMaterial(id, parsed);
+    const material = await materialsService.updateMaterial(id, parsed);
+    if (!material) return { ok: false, error: "Материал не найден" };
+    await writeAuditLog({
+      entityType: "material",
+      entityId: id,
+      userId: admin.id,
+      action: "update",
+      changes: parsed,
+    });
     revalidatePath("/materials");
     revalidatePath(`/materials/${id}`);
     return { ok: true, data: null };
   } catch (error) {
-    return toActionError(error, "Не удалось сохранить материал");
+    return toActionError(error, "Не удалось сохранить материал", {
+      uniqueMessage: "Материал с таким названием уже существует",
+    });
   }
 }
 
 export async function setMaterialArchivedAction(id: string, isArchived: boolean): Promise<ActionResult<null>> {
   try {
-    await requireAdmin();
-    await materialsService.setMaterialArchived(id, isArchived);
+    const admin = await requireAdmin();
+    const material = await materialsService.setMaterialArchived(id, isArchived);
+    if (!material) return { ok: false, error: "Материал не найден" };
+    await writeAuditLog({
+      entityType: "material",
+      entityId: id,
+      userId: admin.id,
+      action: isArchived ? "archive" : "restore",
+    });
     revalidatePath("/materials");
     revalidatePath(`/materials/${id}`);
     return { ok: true, data: null };

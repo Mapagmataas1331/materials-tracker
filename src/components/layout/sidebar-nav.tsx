@@ -28,14 +28,14 @@ export function SidebarNav({
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex min-h-10 items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex min-h-10 min-w-0 items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
                   : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
             >
               <Icon className="size-4 shrink-0" />
-              {item.label}
+              <span className="truncate">{item.label}</span>
             </Link>
           );
         })}

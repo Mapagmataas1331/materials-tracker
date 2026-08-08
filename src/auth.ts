@@ -51,6 +51,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.fullName,
           login: user.login,
           role: user.role,
+          sessionVersion: user.sessionVersion,
         };
       },
     }),
@@ -61,6 +62,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.uid = user.id as string;
         token.role = (user as { role: "admin" | "user" }).role;
         token.login = (user as { login: string }).login;
+        token.sessionVersion = (user as { sessionVersion?: number }).sessionVersion ?? 0;
       }
       return token;
     },
@@ -72,10 +74,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       // Re-validate against the database on every session read so a
-      // disabled account (or deleted role change) takes effect on the
-      // user's very next page load, not only after the JWT expires.
+      // disabled account, role change, or password reset takes effect on
+      // the user's very next page load, not only after the JWT expires.
       const dbUser = await findUserById(uid);
-      if (!dbUser || !dbUser.isActive) {
+      if (
+        !dbUser ||
+        !dbUser.isActive ||
+        dbUser.sessionVersion !== (token.sessionVersion ?? 0)
+      ) {
         session.user = undefined as unknown as typeof session.user;
         return session;
       }

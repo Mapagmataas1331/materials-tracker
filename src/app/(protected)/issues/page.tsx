@@ -14,18 +14,18 @@ export default async function IssuesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">Списание материалов</h1>
+        <h1 className="text-xl font-semibold break-words">Списания</h1>
         <p className="text-sm text-muted-foreground">
           Списать материал со склада. Система не позволит списать больше, чем есть в наличии.
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
-        <Card>
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Новое списание</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-w-0">
             {storageLocations.length > 0 ? (
               <IssueForm storageLocations={storageLocations} />
             ) : (
@@ -37,7 +37,7 @@ export default async function IssuesPage() {
           </CardContent>
         </Card>
 
-        <div>
+        <div className="min-w-0">
           <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Последние списания</h2>
           <RecentMovementsTable rows={recent} showSupplier={false} />
         </div>

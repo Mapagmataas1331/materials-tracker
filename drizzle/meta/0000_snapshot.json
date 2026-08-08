@@ -1,5 +1,5 @@
 {
-  "id": "3d46494b-0d6d-488e-afc2-afa7f8fd8c8f",
+  "id": "14889acd-3987-42c2-87a6-3c3acfb455d3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -231,7 +231,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "material_stock_quantity_non_negative": {
+          "name": "material_stock_quantity_non_negative",
+          "value": "\"material_stock\".\"quantity\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.materials": {
@@ -310,6 +315,21 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "materials_name_unique": {
+          "name": "materials_name_unique",
+          "columns": [
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -744,6 +764,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "session_version": {
+          "name": "session_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "created_at": {
           "name": "created_at",

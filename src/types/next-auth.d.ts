@@ -15,6 +15,7 @@ declare module "next-auth" {
     id: string;
     login: string;
     role: AppRole;
+    sessionVersion?: number;
   }
 }
 
@@ -23,5 +24,6 @@ declare module "next-auth/jwt" {
     uid?: string;
     login?: string;
     role?: AppRole;
+    sessionVersion?: number;
   }
 }

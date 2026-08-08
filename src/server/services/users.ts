@@ -79,7 +79,11 @@ export async function changeUserPassword(id: string, newPassword: string) {
   const passwordHash = await hashPassword(newPassword);
   const [updated] = await db
     .update(users)
-    .set({ passwordHash, updatedAt: new Date() })
+    .set({
+      passwordHash,
+      sessionVersion: sql`${users.sessionVersion} + 1`,
+      updatedAt: new Date(),
+    })
     .where(eq(users.id, id))
     .returning();
   return updated ? omitPasswordHash(updated) : null;

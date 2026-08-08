@@ -33,7 +33,7 @@ export default async function MaterialsPage({
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Материалы</h1>
+          <h1 className="text-xl font-semibold break-words">Материалы</h1>
           <p className="text-sm text-muted-foreground">
             {materials.length} {materials.length === 1 ? "материал" : "материалов"} найдено
             {includeArchived ? " (включая архив)" : ""}

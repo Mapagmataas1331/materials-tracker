@@ -19,18 +19,18 @@ export default async function ReceiptsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">Поступления материалов</h1>
+        <h1 className="text-xl font-semibold break-words">Поступления</h1>
         <p className="text-sm text-muted-foreground">
           Оформите приход материала на склад. Остаток обновится сразу после сохранения.
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
-        <Card>
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Новое поступление</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-w-0">
             {canCreate ? (
               <ReceiptForm storageLocations={storageLocations} suppliers={suppliers} />
             ) : (
@@ -48,7 +48,7 @@ export default async function ReceiptsPage() {
           </CardContent>
         </Card>
 
-        <div>
+        <div className="min-w-0">
           <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Последние поступления</h2>
           <RecentMovementsTable rows={recent} showSupplier />
         </div>

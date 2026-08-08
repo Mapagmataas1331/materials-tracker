@@ -9,6 +9,7 @@ import {
   supplierFormSchema,
   unitFormSchema,
 } from "@/lib/validators/references";
+import { writeAuditLog } from "@/lib/audit";
 import * as refs from "@/server/services/references";
 import { toActionError } from "@/server/actions/to-action-error";
 import type { ActionResult } from "@/server/actions/types";
@@ -101,10 +102,17 @@ export async function setCategoryArchivedAction(id: string, isArchived: boolean)
 
 export async function updateCategoryAction(id: string, values: unknown): Promise<ActionResult<null>> {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     const parsed = categoryFormSchema.parse(values);
     const row = await refs.updateCategory(id, parsed.name);
     if (!row) return { ok: false, error: "Категория не найдена" };
+    await writeAuditLog({
+      entityType: "category",
+      entityId: id,
+      userId: admin.id,
+      action: "update",
+      changes: parsed,
+    });
     revalidatePath("/settings");
     revalidatePath("/materials");
     return { ok: true, data: null };
@@ -141,10 +149,17 @@ export async function setUnitArchivedAction(id: string, isArchived: boolean): Pr
 
 export async function updateUnitAction(id: string, values: unknown): Promise<ActionResult<null>> {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     const parsed = unitFormSchema.parse(values);
     const row = await refs.updateUnit(id, parsed.name, parsed.shortName);
     if (!row) return { ok: false, error: "Единица измерения не найдена" };
+    await writeAuditLog({
+      entityType: "unit",
+      entityId: id,
+      userId: admin.id,
+      action: "update",
+      changes: parsed,
+    });
     revalidatePath("/settings");
     revalidatePath("/materials");
     return { ok: true, data: null };
@@ -178,10 +193,17 @@ export async function setSupplierArchivedAction(id: string, isArchived: boolean)
 
 export async function updateSupplierAction(id: string, values: unknown): Promise<ActionResult<null>> {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     const parsed = supplierFormSchema.parse(values);
     const row = await refs.updateSupplier(id, parsed.name, parsed.contactInfo);
     if (!row) return { ok: false, error: "Поставщик не найден" };
+    await writeAuditLog({
+      entityType: "supplier",
+      entityId: id,
+      userId: admin.id,
+      action: "update",
+      changes: parsed,
+    });
     revalidatePath("/settings");
     return { ok: true, data: null };
   } catch (error) {
@@ -214,10 +236,17 @@ export async function setStorageLocationArchivedAction(id: string, isArchived: b
 
 export async function updateStorageLocationAction(id: string, values: unknown): Promise<ActionResult<null>> {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     const parsed = storageLocationFormSchema.parse(values);
     const row = await refs.updateStorageLocation(id, parsed.name);
     if (!row) return { ok: false, error: "Место хранения не найдено" };
+    await writeAuditLog({
+      entityType: "storage_location",
+      entityId: id,
+      userId: admin.id,
+      action: "update",
+      changes: parsed,
+    });
     revalidatePath("/settings");
     return { ok: true, data: null };
   } catch (error) {
