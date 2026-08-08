@@ -12,6 +12,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
 
 FROM base AS deps
+# Pin npm: lockfiles from Windows/npm11 and Alpine/npm10 disagree on
+# platform optional deps (@esbuild/*), which breaks bare `npm ci`.
+RUN npm install -g npm@11.10.1
 COPY package.json package-lock.json ./
 RUN npm ci
 
