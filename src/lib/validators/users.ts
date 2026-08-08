@@ -37,6 +37,10 @@ export const changeOwnPasswordFormSchema = z
   .refine((v) => v.password === v.confirmPassword, {
     message: "Пароли не совпадают",
     path: ["confirmPassword"],
+  })
+  .refine((v) => v.password !== v.currentPassword, {
+    message: "Новый пароль должен отличаться от текущего",
+    path: ["password"],
   });
 
 export type ChangeOwnPasswordFormValues = z.infer<typeof changeOwnPasswordFormSchema>;

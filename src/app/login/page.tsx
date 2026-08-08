@@ -23,7 +23,7 @@ export default async function LoginPage({
         {passwordChanged === "1" && (
           <p
             role="status"
-            className="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-center text-sm text-success-foreground"
+            className="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-center text-sm text-success"
           >
             Пароль успешно изменён. Войдите с новым паролем.
           </p>

@@ -96,6 +96,13 @@ export class InvalidCurrentPasswordError extends Error {
   }
 }
 
+export class SamePasswordError extends Error {
+  constructor() {
+    super("Новый пароль должен отличаться от текущего");
+    this.name = "SamePasswordError";
+  }
+}
+
 export async function changeOwnPassword(
   id: string,
   currentPassword: string,
@@ -108,6 +115,10 @@ export async function changeOwnPassword(
   const valid = await verifyPassword(user.passwordHash, currentPassword);
   if (!valid) {
     throw new InvalidCurrentPasswordError();
+  }
+  const sameAsCurrent = await verifyPassword(user.passwordHash, newPassword);
+  if (sameAsCurrent) {
+    throw new SamePasswordError();
   }
   return changeUserPassword(id, newPassword);
 }

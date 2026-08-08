@@ -40,6 +40,10 @@ export function toActionError(
     return { ok: false, error: error.message };
   }
 
+  if (error instanceof Error && error.name === "SamePasswordError") {
+    return { ok: false, error: error.message };
+  }
+
   if (
     options.uniqueMessage &&
     error instanceof Error &&
