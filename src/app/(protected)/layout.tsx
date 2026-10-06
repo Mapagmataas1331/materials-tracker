@@ -11,19 +11,28 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   const purchaseListCount = await countPurchaseListItems();
 
   return (
-    <div className="flex min-h-screen overflow-x-hidden">
+    <div className="flex min-h-screen overflow-x-hidden bg-background">
       <aside className="hidden w-64 shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:sticky md:top-0 md:flex md:h-screen md:flex-col">
-        <div className="flex h-14 min-w-0 items-center gap-2 border-b border-sidebar-border px-4 font-semibold">
-          <LogoIcon className="size-7 shrink-0 text-foreground" />
-          <span className="truncate">Учёт материалов</span>
+        <div className="flex h-14 min-w-0 items-center gap-2.5 border-b border-sidebar-border px-4">
+          <span className="flex size-8 min-h-6 min-w-6 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <LogoIcon className="size-5" />
+          </span>
+          <span className="truncate font-semibold tracking-tight">Учёт материалов</span>
         </div>
         <SidebarNav isAdmin={isAdmin} purchaseListCount={purchaseListCount} />
+        <div className="mt-auto border-t border-sidebar-border px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary/80">
+            Exomaterial
+          </p>
+        </div>
       </aside>
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-14 min-w-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-sm sm:px-4">
+        <header className="sticky top-0 z-10 flex h-14 min-w-0 items-center gap-2 border-b border-border bg-background/90 px-3 backdrop-blur-sm sm:px-4">
           <MobileNav isAdmin={isAdmin} purchaseListCount={purchaseListCount} />
           <div className="flex min-w-0 items-center gap-2 truncate font-semibold md:hidden">
-            <LogoIcon className="size-7 shrink-0 text-foreground" />
+            <span className="flex size-8 min-h-6 min-w-6 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <LogoIcon className="size-5" />
+            </span>
             <span className="truncate">Учёт материалов</span>
           </div>
           <div className="ml-auto shrink-0">

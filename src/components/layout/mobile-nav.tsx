@@ -31,13 +31,15 @@ export function MobileNav({
       >
         <Menu className="size-5" />
         {purchaseListCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive" />
+          <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" />
         )}
         <span className="sr-only">Открыть меню</span>
       </SheetTrigger>
       <SheetContent side="left" className="w-72 p-0" showCloseButton={false}>
-        <SheetHeader className="flex-row items-center gap-2 border-b px-4 py-3.5">
-          <LogoIcon className="size-7 text-foreground" />
+        <SheetHeader className="flex-row items-center gap-2.5 border-b px-4 py-3.5">
+          <span className="flex size-8 min-h-6 min-w-6 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <LogoIcon className="size-5" />
+          </span>
           <SheetTitle>Учёт материалов</SheetTitle>
         </SheetHeader>
         <SidebarNav

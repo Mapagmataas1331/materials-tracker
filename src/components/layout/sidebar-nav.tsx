@@ -18,7 +18,7 @@ export function SidebarNav({
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-col gap-1 p-3">
+    <nav className="flex flex-1 flex-col gap-1 p-3">
       {navItems
         .filter((item) => !item.adminOnly || isAdmin)
         .map((item) => {
@@ -34,7 +34,7 @@ export function SidebarNav({
                 "flex min-h-10 min-w-0 items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               )}
             >
               <Icon className="size-4 shrink-0" />
@@ -45,7 +45,7 @@ export function SidebarNav({
                     "shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold leading-none tabular-nums",
                     isActive
                       ? "bg-sidebar-primary-foreground/20 text-sidebar-primary-foreground"
-                      : "bg-destructive/15 text-destructive",
+                      : "bg-primary/15 text-primary",
                   )}
                 >
                   {purchaseListCount > 99 ? "99+" : purchaseListCount}
