@@ -14,7 +14,7 @@ export default async function IssuesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold break-words">Списания</h1>
+        <h1 className="page-title">Списания</h1>
         <p className="text-sm text-muted-foreground">
           Списать материал со склада. Система не позволит списать больше, чем есть в наличии.
         </p>
@@ -38,7 +38,7 @@ export default async function IssuesPage() {
         </Card>
 
         <div className="min-w-0">
-          <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Последние списания</h2>
+          <h2 className="section-kicker mb-3">Последние списания</h2>
           <RecentMovementsTable rows={recent} showSupplier={false} />
         </div>
       </div>

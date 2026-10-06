@@ -9,7 +9,7 @@ export default async function PurchaseListPage() {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold break-words print:hidden">Требуется закупка</h1>
+          <h1 className="page-title print:hidden">Требуется закупка</h1>
           <p className="text-sm text-muted-foreground print:hidden">
             Материалы, остаток которых равен нулю или ниже установленного минимального остатка.
             Список формируется автоматически и не требует ручного ведения.

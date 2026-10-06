@@ -9,7 +9,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { absoluteQuantity, movementQuantitySign } from "@/lib/decimal";
-import { formatDateTime, formatQuantity, MOVEMENT_TYPE_LABELS } from "@/lib/format";
+import { formatDateTime, formatQuantity } from "@/lib/format";
+import { MovementTypeBadge } from "@/components/movements/movement-type-badge";
 import type { JournalMovementRow } from "@/server/services/movements";
 
 export function JournalTable({ rows }: { rows: JournalMovementRow[] }) {
@@ -43,7 +44,7 @@ export function JournalTable({ rows }: { rows: JournalMovementRow[] }) {
                 {formatDateTime(row.createdAt)}
               </TableCell>
               <TableCell className="whitespace-nowrap">
-                {MOVEMENT_TYPE_LABELS[row.type] ?? row.type}
+                <MovementTypeBadge type={row.type} />
               </TableCell>
               <TableCell className="max-w-[10rem] font-medium whitespace-normal sm:max-w-none">
                 <Link href={`/materials/${row.materialId}`} className="hover:underline">

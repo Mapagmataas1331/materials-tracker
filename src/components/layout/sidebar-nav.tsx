@@ -18,7 +18,8 @@ export function SidebarNav({
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-1 flex-col gap-1 p-3">
+    <nav className="flex flex-col gap-0.5 p-3">
+      <p className="caps-label px-3 pt-2 pb-2 text-[10px] text-sidebar-foreground/40">Разделы</p>
       {navItems
         .filter((item) => !item.adminOnly || isAdmin)
         .map((item) => {
@@ -31,13 +32,18 @@ export function SidebarNav({
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex min-h-10 min-w-0 items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "group relative flex min-h-10 min-w-0 items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none",
                 isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-[0_6px_18px_-8px] shadow-brand-orange/60"
                   : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               )}
             >
-              <Icon className="size-4 shrink-0" />
+              <Icon
+                className={cn(
+                  "size-4 shrink-0",
+                  !isActive && "text-sidebar-foreground/45 group-hover:text-brand-orange",
+                )}
+              />
               <span className="min-w-0 flex-1 truncate">{item.label}</span>
               {showBadge && (
                 <span
@@ -45,7 +51,7 @@ export function SidebarNav({
                     "shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold leading-none tabular-nums",
                     isActive
                       ? "bg-sidebar-primary-foreground/20 text-sidebar-primary-foreground"
-                      : "bg-primary/15 text-primary",
+                      : "bg-brand-gold text-brand-black",
                   )}
                 >
                   {purchaseListCount > 99 ? "99+" : purchaseListCount}

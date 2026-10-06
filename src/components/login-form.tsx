@@ -75,7 +75,11 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string }) {
                 {formError}
               </p>
             )}
-            <Button type="submit" disabled={isSubmitting} className="w-full">
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="h-10 w-full font-heading text-sm font-bold tracking-[0.08em] uppercase"
+            >
               {isSubmitting && <Loader2 className="animate-spin" />}
               Войти
             </Button>

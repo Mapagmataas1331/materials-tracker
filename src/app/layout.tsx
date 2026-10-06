@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Roboto_Condensed, Unbounded } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -7,11 +7,34 @@ import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
 
 /**
- * Pragmatica Next (brand typeface) is not licensed/installed here.
- * Inter is a close geometric sans with Cyrillic support and is used as fallback.
+ * Typography per Exomaterial brand guide V1.01 («Типографика», p.36–38).
+ * The brand family is Pragmatica Next (ParaType, commercial). No licensed font
+ * files exist on this machine or in the guide pack (the PDF only carries
+ * Ghostscript Type 3 glyph outlines, which are neither usable nor licensed as
+ * webfonts), so each documented style is mapped to the closest open-licence
+ * (OFL) Cyrillic-capable face:
+ *
+ *   Pragmatica Next M 400/800   (body, UI text)        → Inter
+ *   Pragmatica Next XS 600/800  (headings, labels, CAPS) → Roboto Condensed
+ *   Pragmatica Next XXL 900     (display / slogans)    → Unbounded
+ *
+ * The EXOMATERIAL wordmark itself is never typeset — it is rendered from the
+ * official vector outlines (see components/icons/logo-icon.tsx).
+ * To switch to real Pragmatica Next later, load it via next/font/local into the
+ * same CSS variables.
  */
 const sans = Inter({
   variable: "--font-sans-family",
+  subsets: ["latin", "cyrillic"],
+});
+
+const heading = Roboto_Condensed({
+  variable: "--font-heading-family",
+  subsets: ["latin", "cyrillic"],
+});
+
+const display = Unbounded({
+  variable: "--font-display-family",
   subsets: ["latin", "cyrillic"],
 });
 
@@ -41,7 +64,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="ru"
       suppressHydrationWarning
-      className={`${sans.variable} ${mono.variable} h-full antialiased`}
+      className={`${sans.variable} ${heading.variable} ${display.variable} ${mono.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript() }} />

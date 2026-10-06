@@ -11,7 +11,7 @@ export default async function UsersPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Пользователи</h1>
+          <h1 className="page-title">Пользователи</h1>
           <p className="text-sm text-muted-foreground">
             Учётные записи не удаляются — отключайте доступ переключателем «Активен», история операций сохранится.
           </p>

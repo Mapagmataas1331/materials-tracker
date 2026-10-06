@@ -78,7 +78,7 @@ export default async function JournalPage({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold break-words">Журнал операций</h1>
+        <h1 className="page-title">Журнал операций</h1>
         <p className="text-sm text-muted-foreground">
           Все поступления, списания и корректировки. Найдено: {total}
         </p>

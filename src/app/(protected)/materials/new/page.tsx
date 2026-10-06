@@ -8,7 +8,7 @@ export default async function NewMaterialPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Новый материал</h1>
+      <h1 className="page-title">Новый материал</h1>
       <MaterialForm categories={categories} units={units} />
     </div>
   );

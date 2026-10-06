@@ -23,7 +23,7 @@ export default async function EditMaterialPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Редактирование материала</h1>
+      <h1 className="page-title">Редактирование материала</h1>
       <MaterialForm
         categories={categories}
         units={units}

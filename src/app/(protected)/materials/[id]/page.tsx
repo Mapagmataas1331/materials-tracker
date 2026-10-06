@@ -18,7 +18,9 @@ import { AdjustmentForm } from "@/components/movements/adjustment-form";
 import { TransferForm } from "@/components/movements/transfer-form";
 import { absoluteQuantity, movementQuantitySign } from "@/lib/decimal";
 import { requireUser } from "@/lib/current-user";
-import { formatDateTime, formatQuantity, MOVEMENT_TYPE_LABELS } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { formatDateTime, formatQuantity } from "@/lib/format";
+import { MovementTypeBadge } from "@/components/movements/movement-type-badge";
 import { getMaterialById, getMaterialHistory } from "@/server/services/materials";
 import { listStorageLocations } from "@/server/services/references";
 
@@ -46,7 +48,7 @@ export default async function MaterialDetailPage({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold break-words">{material.name}</h1>
+            <h1 className="page-title normal-case">{material.name}</h1>
             {material.isArchived && (
               <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                 В архиве
@@ -74,25 +76,32 @@ export default async function MaterialDetailPage({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
+        <Card className="border-t-4 border-t-brand-navy dark:border-t-brand-teal">
           <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">Общий остаток</CardTitle>
+            <CardTitle className="caps-label text-muted-foreground">Общий остаток</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">
+          <CardContent className="font-heading text-3xl font-extrabold tabular-nums">
             {formatQuantity(material.totalStock)} {material.unitShortName}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-t-4 border-t-brand-gold">
           <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">Минимальный остаток</CardTitle>
+            <CardTitle className="caps-label text-muted-foreground">Минимальный остаток</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">
+          <CardContent className="font-heading text-3xl font-extrabold tabular-nums">
             {formatQuantity(material.minStock)} {material.unitShortName}
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          className={cn(
+            "border-t-4",
+            material.status === "ok" && "border-t-brand-teal",
+            material.status === "low" && "border-t-brand-orange",
+            material.status === "out" && "border-t-brand-red",
+          )}
+        >
           <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">Статус запаса</CardTitle>
+            <CardTitle className="caps-label text-muted-foreground">Статус запаса</CardTitle>
           </CardHeader>
           <CardContent>
             <StockStatusBadge status={material.status} />
@@ -103,14 +112,14 @@ export default async function MaterialDetailPage({
       {material.comment && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">Комментарий</CardTitle>
+            <CardTitle className="caps-label text-muted-foreground">Комментарий</CardTitle>
           </CardHeader>
           <CardContent className="text-sm">{material.comment}</CardContent>
         </Card>
       )}
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Остатки по местам хранения</h2>
+        <h2 className="section-kicker mb-3">Остатки по местам хранения</h2>
         {material.stockByLocation.length === 0 ? (
           <p className="text-sm text-muted-foreground">Остатков нет.</p>
         ) : (
@@ -169,7 +178,7 @@ export default async function MaterialDetailPage({
       )}
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-muted-foreground">История операций</h2>
+        <h2 className="section-kicker mb-3">История операций</h2>
         {history.length === 0 ? (
           <p className="text-sm text-muted-foreground">Операций пока не было.</p>
         ) : (
@@ -192,7 +201,7 @@ export default async function MaterialDetailPage({
                   <TableRow key={row.id}>
                     <TableCell className="whitespace-nowrap">{formatDateTime(row.createdAt)}</TableCell>
                     <TableCell className="whitespace-nowrap">
-                      {MOVEMENT_TYPE_LABELS[row.type] ?? row.type}
+                      <MovementTypeBadge type={row.type} />
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">{row.storageLocationName}</TableCell>
                     <TableCell className="text-right">

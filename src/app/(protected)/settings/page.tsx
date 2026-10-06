@@ -43,7 +43,7 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold break-words">Настройки</h1>
+        <h1 className="page-title">Настройки</h1>
         <p className="text-sm text-muted-foreground">
           Справочники и журнал изменений. Записи справочников не удаляются, а переносятся в архив и
           перестают предлагаться в новых документах.
@@ -105,7 +105,7 @@ export default async function SettingsPage() {
 
         <TabsContent value="audit" className="space-y-3">
           <div>
-            <h2 className="font-medium">Журнал изменений</h2>
+            <h2 className="caps-label text-sm text-foreground">Журнал изменений</h2>
             <p className="text-sm text-muted-foreground">
               Последние 100 изменений карточек материалов, справочников и паролей.
             </p>

@@ -124,7 +124,7 @@ export function ReferenceSection({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="font-medium">{title}</h2>
+        <h2 className="caps-label text-sm text-foreground">{title}</h2>
         {description && <p className="text-sm text-muted-foreground">{description}</p>}
       </div>
 

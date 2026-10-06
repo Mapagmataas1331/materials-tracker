@@ -19,7 +19,7 @@ export default async function ReceiptsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold break-words">Поступления</h1>
+        <h1 className="page-title">Поступления</h1>
         <p className="text-sm text-muted-foreground">
           Оформите приход материала на склад. Остаток обновится сразу после сохранения.
         </p>
@@ -49,7 +49,7 @@ export default async function ReceiptsPage() {
         </Card>
 
         <div className="min-w-0">
-          <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Последние поступления</h2>
+          <h2 className="section-kicker mb-3">Последние поступления</h2>
           <RecentMovementsTable rows={recent} showSupplier />
         </div>
       </div>
