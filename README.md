@@ -57,7 +57,7 @@
 | Журнал операций | [`docs/screenshots/04-journal.png`](docs/screenshots/04-journal.png) |
 | Поступления | [`docs/screenshots/05-receipts.png`](docs/screenshots/05-receipts.png) |
 
-> Демо-учётки (только для скриншотов / локальной демонстрации): `admin` / `admin` и `user` / `user`. На боевом сервере задайте свои пароли.
+> `admin` / `admin` и `user` / `user` — только демонстрационные учётки для скриншотов. При установке они **не создаются**. Первый запуск начинается без пользователей: создайте администратора по инструкции ниже. Не используйте демонстрационные пароли на сервере.
 
 ---
 
@@ -81,77 +81,153 @@ PostgreSQL и приложение поднимаются контейнерам
 
 Сервисы в compose: **`db`** (PostgreSQL 16), **`app`** (Next.js), **`proxy`** (nginx, профиль `proxy`). Других сервисов нет.
 
-## Установка на сервере
+Файл `docker-compose.override.yml` Compose подхватывает автоматически. Он публикует порт базы `5432` только на этом компьютере (`127.0.0.1`), чтобы локальный Node.js мог подключиться к Postgres. Для сервера этот порт не нужен: чтобы не загружать оверрайд, запускайте основной файл явно: `docker compose -f docker-compose.yml up -d --build`.
 
-1. **Скопируйте проект** на сервер (`git clone`, `scp` или архив).
+## Установка на Windows или Linux
 
-2. **Создайте `.env`** из примера:
+Эта инструкция запускает приложение, базу и встроенный HTTPS-прокси. Перед началом установите и запустите Docker Desktop (Windows) или Docker Engine с Compose (Linux). Откройте PowerShell или терминал в папке проекта и проверьте, что Docker отвечает:
 
-   ```bash
-   cp .env.example .env
-   ```
+Все команды ниже выполняйте из папки проекта, где находятся `docker-compose.yml` и `.env.example`. Проверьте, что вы в нужной папке:
 
-3. **Заполните обязательные переменные:**
+```powershell
+Get-ChildItem docker-compose.yml, .env.example
+```
 
-   | Переменная | Что указать |
-   |---|---|
-   | `COMPOSE_PROFILES` | `proxy` (стандарт) или пусто (свой reverse proxy) |
-   | `POSTGRES_PASSWORD` | Надёжный пароль БД |
-   | `AUTH_SECRET` | Случайная строка: `openssl rand -base64 32` (или `npx auth secret`) |
-   | `AUTH_URL` | Публичный URL системы **с `https://`**, например `https://materials.company.local` или `https://192.168.1.10` |
+В Linux используйте `ls docker-compose.yml .env.example`. Если команда сообщает, что файлы не найдены, перейдите в папку проекта и повторите её.
 
-   `DATABASE_URL` в `.env` для Docker-запуска **менять не нужно**: контейнер `app` ходит в БД по имени хоста `db` внутри Docker-сети (см. `docker-compose.yml`). Значение из `.env` нужно для локальных скриптов вне Compose.
+```text
+docker --version
+docker compose version
+```
 
-4. **Сертификат HTTPS** — только для варианта с `proxy`. См. [HTTPS и сертификат](#https-и-сертификат). Без встроенного прокси этот шаг пропустите.
+Если команда `docker` не найдена или Docker не запущен, сначала установите/запустите Docker и повторите проверку.
 
-5. **Сборка и старт:**
+### 1. Создайте файл настроек
 
-   ```bash
-   docker compose up -d --build
-   ```
+Скопируйте пример `.env.example` в новый файл `.env`.
 
-   При первом запуске Compose соберёт образ приложения, поднимет PostgreSQL, дождётся healthcheck, применит миграции (entrypoint `docker/entrypoint.sh` → `npm run db:migrate`) и стартует `app` (и `proxy`, если включён профиль). База создаётся **пустой** — без пользователей и материалов.
+PowerShell:
 
-6. **Проверка:**
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
 
-   ```bash
-   docker compose ps
-   docker compose logs -f app
-   ```
+Linux:
 
-   Ожидаются `db` / `app` (и `proxy`) в состоянии `Up` / `healthy`.
+```bash
+cp .env.example .env
+nano .env
+```
 
-7. Откройте `AUTH_URL` в браузере. В стандартном варианте это `https://…` (порт 443 указывать не нужно). Самоподписанный сертификат браузер один раз предупредит — для внутренней сети это нормально («Дополнительно» → «Всё равно перейти»). Дальше — [создание администратора](#первый-администратор).
+Файл `.env` содержит пароли и секреты; не отправляйте его другим людям и не добавляйте в Git. В строках ниже заменяйте только текст справа от `=`. Не добавляйте кавычки и пробелы вокруг `=`.
+
+### 2. Заполните четыре значения в `.env`
+
+| Переменная | Что указать |
+|---|---|
+| `COMPOSE_PROFILES` | Оставьте `proxy`, чтобы использовать встроенный HTTPS-прокси. Если у вас уже есть nginx, см. вариант без прокси ниже. |
+| `POSTGRES_PASSWORD` | Случайная строка из букв `a`–`f` и цифр. Её можно создать командой `docker run --rm alpine/openssl rand -hex 32`; скопируйте результат после `POSTGRES_PASSWORD=`. |
+| `AUTH_SECRET` | Секрет для сессий. Создайте командой `docker run --rm alpine/openssl rand -base64 48` и скопируйте результат после `AUTH_SECRET=`. |
+| `AUTH_URL` | Адрес, по которому вы будете открывать приложение. Для сервера укажите `https://` и имя/IP сервера, например `https://materials.company.local`. Для локального запуска без прокси — `http://localhost:3000`. |
+
+Сохраните `.env`. Остальные строки оставьте без изменений. В частности, не меняйте `DATABASE_URL`: Compose сам настраивает подключение контейнера приложения к базе.
+
+### 3. Подготовьте HTTPS-сертификат
+
+Если `COMPOSE_PROFILES=proxy`, nginx требует сертификат перед запуском. Создайте самоподписанный сертификат по инструкции в разделе [HTTPS и сертификат](#https-и-сертификат). Имя в команде сертификата должно совпадать с именем в `AUTH_URL`. Для доверенного сертификата пропустите генерацию и положите выданные файлы в `docker/certs/server.crt` и `docker/certs/server.key`.
+
+Если встроенный прокси не нужен, очистите значение `COMPOSE_PROFILES=` и установите `AUTH_URL=http://localhost:3000`. Не генерируйте сертификат. Этот вариант предназначен для сервера, где уже настроен собственный прокси.
+
+### 4. Соберите и запустите приложение
+
+```bash
+docker compose up -d --build
+```
+
+Первый запуск может занять несколько минут: Docker загружает нужные компоненты и собирает приложение. Команда создаёт пустую базу, применяет миграции и запускает контейнеры.
+
+Проверьте их состояние:
+
+```bash
+docker compose ps
+```
+
+При стандартной настройке должны быть запущены `db`, `app` и `proxy`. `db` должен показывать состояние `healthy`. Чтобы смотреть сообщения приложения, выполните `docker compose logs -f app`. Нажмите `Ctrl+C`, чтобы выйти из просмотра логов; контейнеры продолжат работать.
+
+### 5. Создайте первого администратора
+
+В новой базе нет пользователей. Выполните команду из раздела [Первый администратор](#первый-администратор) и задайте пароль длиной не менее 8 символов.
+
+### 6. Откройте приложение
+
+Откройте адрес из `AUTH_URL` в браузере. Если вы создали самоподписанный сертификат, браузер покажет предупреждение о доверии — это ожидаемо для внутренней сети. Если страница не открывается, проверьте состояние `docker compose ps` и сообщения `docker compose logs --tail=100 app proxy`.
+
+### Если Docker сообщает `password authentication failed` для `materials_app`
+
+Пароль `POSTGRES_PASSWORD` применяется образом PostgreSQL только при первом создании тома `db_data`. Если `.env` изменили после этого или подключили ранее созданный том, пароль роли в самой базе останется прежним, хотя Compose уже передаёт приложению новое значение. Данные при этом не повреждены.
+
+Остановите перезапускающийся контейнер приложения, затем откройте локальную консоль PostgreSQL. В этом проекте роль базы называется `materials_app`:
+
+```bash
+docker compose stop app
+docker compose exec -it -u postgres db psql -U materials_app -d materials
+```
+
+В консоли выполните `\password materials_app` и задайте пароль, совпадающий со значением `POSTGRES_PASSWORD` в `.env`. Введите `\q`, затем пересоздайте контейнер приложения, чтобы он прочитал `.env`:
+
+```bash
+docker compose up -d --force-recreate app
+```
+
+Если приложение всё ещё не подключается, проверьте, что пароль в `.env` совпадает с заданным в PostgreSQL. Compose напрямую подставляет его в URL подключения, поэтому используйте hex-пароль из `openssl rand -hex 32`, без символов URI. Удаление тома (`docker compose down -v`) также сбросит пароль при следующем создании базы, но безвозвратно удалит данные — используйте его только если база точно не нужна.
 
 ## HTTPS и сертификат
 
 Только для `COMPOSE_PROFILES=proxy`. HTTPS терминирует сервис **`proxy`** (`nginx:alpine`): слушает 80/443, редиректит HTTP→HTTPS, проксирует на `app:3000` (`docker/nginx.conf`). Файлы `server.crt` / `server.key` монтируются из `docker/certs/` (в git не хранятся — см. `.gitignore`).
 
-**Самоподписанный сертификат** (внутренняя сеть):
+**Самоподписанный сертификат** (внутренняя сеть). Имя в `subjectAltName` должно совпадать с хостом из `AUTH_URL`; браузеры проверяют именно это поле:
 
 ```bash
 openssl req -x509 -nodes -newkey rsa:2048 \
   -keyout docker/certs/server.key \
   -out docker/certs/server.crt \
-  -days 825 -subj "/CN=materials-tracker.local"
+  -days 825 -subj "/CN=materials.company.local" \
+  -addext "subjectAltName=DNS:materials.company.local"
 ```
 
 Без `openssl` на хосте:
 
 ```bash
 docker run --rm -v "$(pwd)/docker/certs:/certs" alpine/openssl req -x509 -nodes -newkey rsa:2048 \
-  -keyout /certs/server.key -out /certs/server.crt -days 825 -subj "/CN=materials-tracker.local"
+  -keyout /certs/server.key -out /certs/server.crt -days 825 \
+  -subj "/CN=materials.company.local" \
+  -addext "subjectAltName=DNS:materials.company.local"
 ```
+
+В PowerShell запустите ту же команду через Docker:
+
+```powershell
+$certDir = (Resolve-Path .\docker\certs).Path.Replace('\', '/')
+docker run --rm --mount "type=bind,source=$certDir,target=/certs" alpine/openssl req -x509 -nodes -newkey rsa:2048 `
+  -keyout /certs/server.key -out /certs/server.crt -days 825 `
+  -subj "/CN=materials.company.local" `
+  -addext "subjectAltName=DNS:materials.company.local"
+```
+
+Если в `.env` выбран другой адрес, замените `materials.company.local` в команде на его имя. Например, для `AUTH_URL=https://localhost` используйте `localhost`.
 
 **Свой сертификат** (внутренний УЦ / домен): положите файлы как `docker/certs/server.crt` и `docker/certs/server.key` (или обновите пути в `docker/nginx.conf`).
 
-После появления файлов: `docker compose up -d proxy` (или полный `up -d --build`).
+Перед запуском `docker compose up -d proxy` (или полного `docker compose up -d --build`) убедитесь, что оба файла существуют и имя в сертификате совпадает с `AUTH_URL`.
 
-> **Важно:** `AUTH_URL` должен совпадать с тем адресом, по которому пользователи открывают систему (схема + хост). Иначе Auth.js сломает callback’и сессии.
+Если в `AUTH_URL` указан IP-адрес, замените SAN на `subjectAltName=IP:192.168.1.10`. Самоподписанный сертификат вызовет предупреждение браузера; для публичного доступа используйте сертификат, которому доверяет клиент.
+
+> **Важно:** `AUTH_URL`, хост в `subjectAltName` и адрес, по которому пользователи открывают систему, должны совпадать. Иначе браузер покажет ошибку сертификата или Auth.js сломает callback’и сессии.
 
 ## Первый администратор
 
-Публичной регистрации нет. Первую учётку создайте в контейнере:
+Публичной регистрации нет, а начальная база не содержит пользователей. Создайте администратора из контейнера:
 
 ```bash
 docker compose exec -it app npm run create-admin
@@ -246,7 +322,7 @@ cat backup_2026-08-08.sql | docker compose exec -T db psql -U materials_app -d m
 │   └── server/             # actions + services
 ├── Dockerfile
 ├── docker-compose.yml      # db + app + proxy (profile)
-├── docker-compose.override.yml  # только локальная разработка (порт 5432)
+├── docker-compose.override.yml  # локальная разработка (порт 5432 только на localhost)
 └── .env.example
 ```
 
@@ -279,4 +355,4 @@ npm run db:studio
 npm run create-admin
 ```
 
-`docker-compose.override.yml` открывает Postgres на `localhost:5432` и **не должен** использоваться на сервере предприятия — на проде достаточно одного `docker-compose.yml`.
+Compose автоматически подхватывает `docker-compose.override.yml`; он открывает Postgres только на `127.0.0.1:5432`, недоступном с других компьютеров. Для сервера используйте только основной файл: `docker compose -f docker-compose.yml up -d --build`. Для локальной разработки этот оверрайд позволяет подключиться к Postgres с хоста через `localhost:5432`.
